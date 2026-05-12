@@ -3,1317 +3,210 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>POS Barcode & QR Scanner</title>
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+    <title>Barcode and QR Reader POS System</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            --primary: #2563eb;
-            --primary-dark: #1e40af;
-            --secondary: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --bg-light: #f9fafb;
-            --bg-white: #ffffff;
-            --text-primary: #1f2937;
-            --text-secondary: #6b7280;
-            --border-color: #e5e7eb;
-            --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
-        }
-
+        /* Add some basic styling to our POS system */
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 10px;
-            color: var(--text-primary);
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            height: auto;
-        }
-
-        @media (max-width: 1024px) {
-            .container {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .panel {
-            background: var(--bg-white);
-            border-radius: 12px;
-            box-shadow: var(--shadow-lg);
+            font-family: Arial, sans-serif;
             padding: 20px;
-            display: flex;
-            flex-direction: column;
         }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid var(--border-color);
+        .pos-container {
+            width: 80%;
+            margin: 40px auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
-
-        .header h2 {
-            font-size: 1.5rem;
-            color: var(--primary);
-        }
-
-        .scanner-section {
+        .cart-pane {
             margin-bottom: 20px;
         }
-
-        .input-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-        }
-
-        .input-field {
-            flex: 1;
-            min-width: 200px;
-            padding: 12px 15px;
-            border: 2px solid var(--border-color);
-            border-radius: 8px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .input-field:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-        }
-
-        .btn {
-            padding: 12px 20px;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            justify-content: center;
-            white-space: nowrap;
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .btn-primary:disabled {
-            background: #9ca3af;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .btn-secondary {
-            background: var(--secondary);
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: #059669;
-            transform: translateY(-2px);
-        }
-
-        .btn-danger {
-            background: var(--danger);
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background: #dc2626;
-            transform: translateY(-2px);
-        }
-
-        .btn-warning {
-            background: var(--warning);
-            color: white;
-        }
-
-        .btn-warning:hover {
-            background: #d97706;
-        }
-
-        .btn-small {
-            padding: 8px 12px;
-            font-size: 0.875rem;
-        }
-
-        .camera-container {
-            position: relative;
-            background: #000;
-            border-radius: 8px;
-            overflow: hidden;
-            margin-bottom: 15px;
-            aspect-ratio: 4/3;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 3px solid var(--primary);
-        }
-
-        #scanner-container {
-            width: 100%;
-            height: 100%;
-            position: relative;
-        }
-
-        .drawingBuffer {
-            display: none;
-        }
-
-        .camera-overlay {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 70%;
-            height: 70%;
-            border: 3px solid #10b981;
-            border-radius: 8px;
-            box-shadow: inset 0 0 20px rgba(16, 185, 129, 0.3);
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        .camera-overlay::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(180deg, transparent 0%, rgba(16, 185, 129, 0.1) 50%, transparent 100%);
-            animation: scan 2s infinite;
-        }
-
-        @keyframes scan {
-            0% { transform: translateY(-100%); }
-            100% { transform: translateY(100%); }
-        }
-
-        .camera-controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .camera-status {
-            padding: 10px 15px;
-            background: #dbeafe;
-            border-left: 4px solid var(--primary);
-            border-radius: 6px;
-            font-size: 0.9rem;
-            color: #0c2d6b;
-            margin-bottom: 15px;
-            font-weight: 600;
-        }
-
-        .camera-status.active {
-            background: #d1fae5;
-            border-left-color: var(--secondary);
-            color: #065f46;
-        }
-
-        .camera-status.error {
-            background: #fee2e2;
-            border-left-color: var(--danger);
-            color: #991b1b;
-        }
-
-        .camera-status.scanning {
-            background: #fef3c7;
-            border-left-color: var(--warning);
-            color: #78350f;
-        }
-
-        .cart-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-height: 400px;
-        }
-
-        .cart-items {
-            flex: 1;
-            overflow-y: auto;
-            margin-bottom: 15px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 10px;
-            background: var(--bg-light);
-        }
-
         .cart-item {
-            background: var(--bg-white);
-            padding: 15px;
-            margin-bottom: 10px;
-            border-radius: 8px;
-            border-left: 4px solid var(--primary);
-            display: grid;
-            grid-template-columns: 1fr auto auto;
-            gap: 15px;
-            align-items: center;
-            box-shadow: var(--shadow);
-            animation: slideIn 0.3s ease;
+            padding: 10px;
+            border-bottom: 1px solid #ccc;
         }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateX(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
+        .cart-item:last-child {
+            border-bottom: none;
         }
-
-        .item-details {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .item-name {
-            font-weight: 700;
-            color: var(--text-primary);
-            font-size: 1rem;
-        }
-
-        .item-id {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-        }
-
-        .item-price {
-            font-size: 1.1rem;
-            color: var(--primary);
-            font-weight: 600;
-        }
-
-        .quantity-control {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: var(--bg-light);
-            border-radius: 6px;
-            padding: 5px;
-        }
-
-        .qty-btn {
-            width: 30px;
-            height: 30px;
-            border: none;
-            background: var(--primary);
-            color: white;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 700;
-            transition: all 0.2s;
-        }
-
-        .qty-btn:hover {
-            background: var(--primary-dark);
-        }
-
-        .qty-display {
-            min-width: 30px;
-            text-align: center;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .delete-btn {
-            background: var(--danger);
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s;
-        }
-
-        .delete-btn:hover {
-            background: #dc2626;
-            transform: scale(1.05);
-        }
-
-        .summary-section {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 20px;
-            border-radius: 12px;
-            color: white;
-            margin-bottom: 15px;
-        }
-
-        .summary-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 12px;
-            font-size: 1rem;
-            align-items: center;
-        }
-
-        .summary-row label {
-            font-weight: 600;
-            opacity: 0.9;
-        }
-
-        .summary-value {
-            font-size: 1.2rem;
-            font-weight: 700;
-        }
-
-        .summary-row.total {
-            border-top: 2px solid rgba(255, 255, 255, 0.3);
-            padding-top: 12px;
-            font-size: 1.3rem;
-        }
-
-        .summary-row.total .summary-value {
-            font-size: 1.5rem;
-        }
-
-        .discount-input-group {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-
-        .discount-input-group input {
-            flex: 1;
-            padding: 8px 12px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 6px;
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            font-weight: 600;
-        }
-
-        .discount-input-group input::placeholder {
-            color: rgba(255, 255, 255, 0.6);
-        }
-
-        .discount-input-group button {
-            padding: 8px 15px;
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 6px;
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .discount-input-group button:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        .action-buttons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-
-        .action-buttons .btn {
-            width: 100%;
-        }
-
-        .empty-cart {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 40px 20px;
-            color: var(--text-secondary);
-            text-align: center;
-        }
-
-        .empty-cart-icon {
-            font-size: 3rem;
-            margin-bottom: 15px;
-            opacity: 0.5;
-        }
-
-        .alert {
-            padding: 12px 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            animation: slideDown 0.3s ease;
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .alert-success {
-            background: #d1fae5;
-            color: #065f46;
-            border-left: 4px solid var(--secondary);
-        }
-
-        .alert-error {
-            background: #fee2e2;
-            color: #991b1b;
-            border-left: 4px solid var(--danger);
-        }
-
-        .alert-info {
-            background: #dbeafe;
-            color: #0c2d6b;
-            border-left: 4px solid var(--primary);
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: var(--bg-white);
-            padding: 30px;
-            border-radius: 12px;
-            max-width: 500px;
-            width: 90%;
-            box-shadow: var(--shadow-lg);
-            animation: popIn 0.3s ease;
-        }
-
-        @keyframes popIn {
-            from {
-                opacity: 0;
-                transform: scale(0.9);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        .modal-header {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 20px;
-            color: var(--primary);
-        }
-
-        .modal-buttons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
+        .total-pane {
             margin-top: 20px;
         }
-
-        .receipt {
-            display: none;
-            background: var(--bg-white);
-            padding: 20px;
-            border-radius: 8px;
-            max-width: 400px;
-            font-family: 'Courier New', monospace;
+        .total-pane .total {
+            font-weight: bold;
+        }
+        .discount-pane {
             margin-top: 20px;
         }
-
-        .receipt.active {
-            display: block;
+        .discount-pane .discount {
+            font-weight: bold;
         }
-
-        .receipt-header {
-            text-align: center;
-            border-bottom: 2px dashed var(--border-color);
-            padding-bottom: 15px;
-            margin-bottom: 15px;
+        .print-pane {
+            margin-top: 20px;
         }
-
-        .receipt-title {
-            font-size: 1.3rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-
-        .receipt-item {
-            display: grid;
-            grid-template-columns: 1fr auto;
-            gap: 10px;
-            margin-bottom: 8px;
-            font-size: 0.9rem;
-        }
-
-        .receipt-total {
-            border-top: 2px dashed var(--border-color);
-            border-bottom: 2px dashed var(--border-color);
-            padding: 10px 0;
-            margin: 10px 0;
-            font-weight: 700;
-            display: grid;
-            grid-template-columns: 1fr auto;
-            gap: 10px;
-        }
-
-        .receipt-footer {
-            text-align: center;
-            margin-top: 15px;
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-        }
-
-        @media print {
-            body {
-                background: white;
-            }
-            .panel {
-                box-shadow: none;
-                border: 1px solid var(--border-color);
-            }
-            .header, .input-group, .action-buttons, .scanner-section, .camera-container, .camera-controls {
-                display: none;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 10px;
-            }
-
-            .panel {
-                padding: 15px;
-            }
-
-            .header h2 {
-                font-size: 1.2rem;
-            }
-
-            .input-field {
-                min-width: 150px;
-                padding: 10px 12px;
-                font-size: 0.9rem;
-            }
-
-            .btn {
-                padding: 10px 15px;
-                font-size: 0.9rem;
-            }
-
-            .cart-item {
-                grid-template-columns: 1fr;
-                gap: 10px;
-            }
-
-            .quantity-control {
-                width: 100%;
-                justify-content: space-between;
-            }
-
-            .summary-row {
-                font-size: 0.9rem;
-            }
-
-            .action-buttons {
-                grid-template-columns: 1fr;
-            }
-
-            .camera-controls {
-                flex-direction: column;
-            }
-
-            .camera-controls .btn {
-                width: 100%;
-            }
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        .pulse {
-            animation: pulse 0.5s ease;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-
-        .scanner-input-hidden {
-            position: absolute;
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .detected-code {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            background: rgba(16, 185, 129, 0.9);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            z-index: 20;
-            font-weight: 600;
+        .print-pane .print {
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Scanner Panel -->
-        <div class="panel">
-            <div class="header">
-                <h2>📱 Barcode/QR Scanner</h2>
-                <span style="font-size: 2rem;">🔍</span>
-            </div>
-
-            <div id="alertContainer"></div>
-
-            <div class="camera-status" id="cameraStatus">
-                📹 Camera: Ready to start
-            </div>
-
-            <div class="camera-container">
-                <div id="scanner-container"></div>
-                <div class="camera-overlay"></div>
-                <div id="detectedCode" class="detected-code" style="display: none;"></div>
-            </div>
-
-            <div class="camera-controls">
-                <button class="btn btn-primary" id="startCameraBtn" onclick="app.startScanning()">
-                    ▶️ Start Scanning
-                </button>
-                <button class="btn btn-danger" id="stopCameraBtn" onclick="app.stopScanning()" style="display: none;">
-                    ⏹️ Stop Scanning
-                </button>
-            </div>
-
-            <div class="scanner-section">
-                <div class="input-group">
-                    <input 
-                        type="text" 
-                        id="manualBarcodeInput" 
-                        class="input-field" 
-                        placeholder="Or enter barcode manually..."
-                    >
-                    <button class="btn btn-secondary" onclick="app.addFromManualInput()">Add</button>
-                </div>
-
-                <div class="input-group">
-                    <input 
-                        type="text" 
-                        id="itemName" 
-                        class="input-field" 
-                        placeholder="Item Name (Optional)"
-                    >
-                </div>
-
-                <div class="input-group">
-                    <input 
-                        type="number" 
-                        id="itemPrice" 
-                        class="input-field" 
-                        placeholder="Price (₹)"
-                        value="100"
-                        min="0"
-                        step="0.01"
-                    >
-                    <input 
-                        type="number" 
-                        id="itemQuantity" 
-                        class="input-field" 
-                        placeholder="Quantity"
-                        value="1"
-                        min="1"
-                    >
-                </div>
-            </div>
-
-            <div class="cart-container">
-                <h3 style="margin-bottom: 15px; color: var(--primary);">📦 Cart Items</h3>
-                <div id="cartItems" class="cart-items">
-                    <div class="empty-cart">
-                        <div class="empty-cart-icon">🛒</div>
-                        <p>Cart is empty. Scan items to get started.</p>
-                    </div>
-                </div>
-            </div>
+    <div class="pos-container">
+        <div class="cart-pane">
+            <h2>Cart</h2>
+            <div id="cart-items"></div>
         </div>
-
-        <!-- Summary & Checkout Panel -->
-        <div class="panel">
-            <div class="header">
-                <h2>💳 Checkout</h2>
-                <span style="font-size: 2rem;">✓</span>
-            </div>
-
-            <div class="summary-section">
-                <div class="summary-row">
-                    <label>Subtotal:</label>
-                    <span class="summary-value" id="subtotal">₹0.00</span>
-                </div>
-
-                <div class="summary-row">
-                    <label>Items:</label>
-                    <span class="summary-value" id="itemCount">0</span>
-                </div>
-
-                <div class="discount-input-group">
-                    <input 
-                        type="number" 
-                        id="discountInput" 
-                        placeholder="Discount % or ₹"
-                        min="0"
-                        step="0.01"
-                    >
-                    <button onclick="app.applyDiscount()">Apply</button>
-                </div>
-
-                <div class="summary-row" id="discountRow" style="display: none;">
-                    <label>Discount:</label>
-                    <span class="summary-value" id="discountAmount">-₹0.00</span>
-                </div>
-
-                <div class="summary-row total">
-                    <label>Total:</label>
-                    <span class="summary-value" id="totalAmount">₹0.00</span>
-                </div>
-            </div>
-
-            <div class="action-buttons">
-                <button class="btn btn-secondary" onclick="app.printReceipt()">🖨️ Print Receipt</button>
-                <button class="btn btn-danger" onclick="app.clearCart()">🗑️ Clear Cart</button>
-            </div>
-
-            <div id="receipt" class="receipt">
-                <div class="receipt-header">
-                    <div class="receipt-title">POS RECEIPT</div>
-                    <div style="font-size: 0.8rem; margin-top: 5px; color: var(--text-secondary);">
-                        <div id="receiptDate"></div>
-                        <div id="receiptTime"></div>
-                    </div>
-                </div>
-
-                <div id="receiptItems"></div>
-
-                <div class="receipt-total">
-                    <span>Subtotal:</span>
-                    <span id="receiptSubtotal">₹0.00</span>
-                </div>
-
-                <div id="receiptDiscount" style="display: none; border-top: 1px dashed var(--border-color); border-bottom: none; padding: 8px 0; margin: 8px 0;">
-                    <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px;">
-                        <span>Discount:</span>
-                        <span id="receiptDiscountAmount">-₹0.00</span>
-                    </div>
-                </div>
-
-                <div class="receipt-total" style="border-top: none;">
-                    <span>TOTAL:</span>
-                    <span id="receiptTotal">₹0.00</span>
-                </div>
-
-                <div class="receipt-footer">
-                    <p>Thank you for your purchase!</p>
-                    <p style="margin-top: 10px;">Generated on: <span id="receiptDateTime"></span></p>
-                </div>
-            </div>
+        <div class="total-pane">
+            <h2>Total</h2>
+            <div id="total"></div>
+        </div>
+        <div class="discount-pane">
+            <h2>Discount</h2>
+            <input type="number" id="discount" placeholder="Enter discount percentage">
+            <button id="apply-discount">Apply</button>
+        </div>
+        <div class="print-pane">
+            <h2>Print</h2>
+            <button id="print-btn">Print to PDF</button>
         </div>
     </div>
 
-    <!-- Confirmation Modal -->
-    <div id="confirmModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">Confirm Action</div>
-            <p id="confirmMessage" style="margin-bottom: 20px; color: var(--text-secondary);"></p>
-            <div class="modal-buttons">
-                <button class="btn btn-secondary" onclick="app.confirmAction(true)">Confirm</button>
-                <button class="btn btn-danger" onclick="app.confirmAction(false)">Cancel</button>
-            </div>
-        </div>
-    </div>
-
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.1.0/dist/jsQR.js"></script>
     <script>
-        const app = {
-            cart: [],
-            discountType: null,
-            discountValue: 0,
-            pendingAction: null,
-            scannerActive: false,
-            lastScannedCode: null,
-            scanDebounceTime: 1000,
-            lastScanTime: 0,
-
-            products: {
-                '1234567890': { name: 'Coca Cola', price: 100 },
-                '9876543210': { name: 'Pepsi', price: 100 },
-                '1111111111': { name: 'Water Bottle', price: 100 },
-                '2222222222': { name: 'Energy Drink', price: 100 },
-                '3333333333': { name: 'Coffee', price: 100 },
-                '4444444444': { name: 'Tea', price: 100 },
-                '5555555555': { name: 'Juice', price: 100 },
-                '6666666666': { name: 'Milk', price: 100 },
-                '7777777777': { name: 'Sprite', price: 100 },
-                '8888888888': { name: 'Fanta', price: 100 },
-                '9999999999': { name: 'Thumbs Up', price: 100 },
-                '0000000000': { name: 'Maaza', price: 100 },
-            },
-
-            init() {
-                const manualInput = document.getElementById('manualBarcodeInput');
-                manualInput.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        this.addFromManualInput();
-                    }
-                });
-                this.updateSummary();
-                this.showAlert('Click "Start Scanning" to begin scanning barcodes', 'info');
-            },
-
-            startScanning() {
-                try {
-                    this.updateCameraStatus('📹 Initializing scanner...', 'info');
-                    document.getElementById('startCameraBtn').disabled = true;
-
-                    Quagga.init({
-                        inputStream: {
-                            name: "Live",
-                            type: "LiveStream",
-                            target: document.querySelector('#scanner-container'),
-                            constraints: {
-                                facingMode: "environment",
-                                width: { ideal: 1280 },
-                                height: { ideal: 720 }
-                            }
-                        },
-                        decoder: {
-                            workers: 2,
-                            debug: false,
-                            multiple: false,
-                            formats: ['code_128', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'qr_code', 'data_matrix', 'aztec']
-                        },
-                        locator: {
-                            halfSample: true
-                        }
-                    }, (err) => {
-                        if (err) {
-                            this.updateCameraStatus('❌ Scanner Error: ' + err.message, 'error');
-                            this.showAlert('Scanner initialization failed: ' + err.message, 'error');
-                            document.getElementById('startCameraBtn').disabled = false;
-                            return;
-                        }
-                        this.scannerActive = true;
-                        Quagga.start();
-                        this.updateCameraStatus('📹 Scanner Active - Point at barcode', 'active');
-                        document.getElementById('startCameraBtn').style.display = 'none';
-                        document.getElementById('stopCameraBtn').style.display = 'flex';
-                        this.setupScannerListeners();
-                    });
-                } catch (error) {
-                    this.updateCameraStatus('❌ Error: ' + error.message, 'error');
-                    this.showAlert('Failed to start scanner: ' + error.message, 'error');
-                    document.getElementById('startCameraBtn').disabled = false;
-                }
-            },
-
-            setupScannerListeners() {
-                Quagga.onDetected((result) => {
-                    if (result && result.codeResult && result.codeResult.code) {
-                        const barcode = result.codeResult.code;
-                        const currentTime = Date.now();
-
-                        if (barcode !== this.lastScannedCode || currentTime - this.lastScanTime > this.scanDebounceTime) {
-                            this.lastScannedCode = barcode;
-                            this.lastScanTime = currentTime;
-                            this.updateCameraStatus('✅ Barcode Detected: ' + barcode, 'scanning');
-                            document.getElementById('detectedCode').textContent = '✓ ' + barcode;
-                            document.getElementById('detectedCode').style.display = 'block';
-                            setTimeout(() => {
-                                document.getElementById('detectedCode').style.display = 'none';
-                            }, 2000);
-                            this.processScan(barcode);
-                        }
-                    }
-                });
-
-                Quagga.onProcessed((result) => {
-                    if (result && result.boxes) {
-                        let drawingCtx = Quagga.canvas.ctx.overlay;
-                        if (drawingCtx) {
-                            drawingCtx.clearRect(0, 0, parseInt(Quagga.canvas.dom.overlay.getAttribute('width')), parseInt(Quagga.canvas.dom.overlay.getAttribute('height')));
-                            if (result.boxes.filter(box => box !== result.box).length > 0) {
-                                drawingCtx.strokeStyle = '#10b981';
-                                result.boxes.filter(box => box !== result.box).forEach(box => {
-                                    Quagga.ImageDebug.drawPath(box, { x: 0, y: 1 }, drawingCtx);
-                                });
-                            }
-                            if (result.box) {
-                                drawingCtx.strokeStyle = '#ef4444';
-                                Quagga.ImageDebug.drawPath(result.box, { x: 0, y: 1 }, drawingCtx);
-                            }
-                        }
-                    }
-                });
-            },
-
-            stopScanning() {
-                try {
-                    Quagga.stop();
-                    this.scannerActive = false;
-                    document.getElementById('startCameraBtn').style.display = 'flex';
-                    document.getElementById('stopCameraBtn').style.display = 'none';
-                    document.getElementById('startCameraBtn').disabled = false;
-                    this.updateCameraStatus('📹 Scanner: Stopped', 'info');
-                } catch (error) {
-                    this.showAlert('Error stopping scanner', 'error');
-                }
-            },
-
-            processScan(barcode) {
-                document.getElementById('manualBarcodeInput').value = barcode;
-                this.addFromManualInput();
-            },
-
-            addFromManualInput() {
-                const barcode = document.getElementById('manualBarcodeInput').value.trim();
-                const manualName = document.getElementById('itemName').value.trim();
-                const manualPrice = parseFloat(document.getElementById('itemPrice').value) || 100;
-                const quantity = parseInt(document.getElementById('itemQuantity').value) || 1;
-
-                if (!barcode) {
-                    this.showAlert('Please scan or enter a barcode', 'error');
-                    return;
-                }
-
-                let itemName = manualName;
-                let itemPrice = manualPrice;
-
-                if (this.products[barcode]) {
-                    itemName = this.products[barcode].name;
-                    itemPrice = this.products[barcode].price;
-                }
-
-                const existingItem = this.cart.find(item => item.barcode === barcode);
-                if (existingItem) {
-                    existingItem.quantity += quantity;
-                    this.showAlert(`✅ Added ${quantity} more to ${itemName}`, 'success');
-                } else {
-                    this.cart.push({
-                        barcode,
-                        name: itemName || 'Unknown Item',
-                        price: itemPrice,
-                        quantity
-                    });
-                    this.showAlert(`✅ Added ${itemName || 'Item'} to cart`, 'success');
-                }
-
-                document.getElementById('manualBarcodeInput').value = '';
-                document.getElementById('itemName').value = '';
-                document.getElementById('itemPrice').value = '100';
-                document.getElementById('itemQuantity').value = '1';
-                document.getElementById('manualBarcodeInput').focus();
-
-                this.renderCart();
-                this.updateSummary();
-            },
-
-            updateQuantity(barcode, change) {
-                const item = this.cart.find(i => i.barcode === barcode);
-                if (item) {
-                    item.quantity += change;
-                    if (item.quantity <= 0) {
-                        this.removeItem(barcode);
-                    } else {
-                        this.renderCart();
-                        this.updateSummary();
-                    }
-                }
-            },
-
-            removeItem(barcode) {
-                this.cart = this.cart.filter(item => item.barcode !== barcode);
-                this.renderCart();
-                this.updateSummary();
-                this.showAlert('Item removed from cart', 'success');
-            },
-
-            renderCart() {
-                const cartContainer = document.getElementById('cartItems');
-
-                if (this.cart.length === 0) {
-                    cartContainer.innerHTML = `
-                        <div class="empty-cart">
-                            <div class="empty-cart-icon">🛒</div>
-                            <p>Cart is empty. Scan items to get started.</p>
-                        </div>
-                    `;
-                    return;
-                }
-
-                cartContainer.innerHTML = this.cart.map(item => `
-                    <div class="cart-item">
-                        <div class="item-details">
-                            <div class="item-name">${this.escapeHtml(item.name)}</div>
-                            <div class="item-id">ID: ${this.escapeHtml(item.barcode)}</div>
-                            <div class="item-price">₹${(item.price * item.quantity).toFixed(2)}</div>
-                        </div>
-                        <div class="quantity-control">
-                            <button class="qty-btn" onclick="app.updateQuantity('${item.barcode}', -1)">−</button>
-                            <span class="qty-display">${item.quantity}</span>
-                            <button class="qty-btn" onclick="app.updateQuantity('${item.barcode}', 1)">+</button>
-                        </div>
-                        <button class="delete-btn" onclick="app.removeItem('${item.barcode}')">Delete</button>
-                    </div>
-                `).join('');
-            },
-
-            updateSummary() {
-                const subtotal = this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                let total = subtotal;
-                let discountAmount = 0;
-
-                if (this.discountValue > 0) {
-                    if (this.discountType === 'percentage') {
-                        discountAmount = (subtotal * this.discountValue) / 100;
-                    } else {
-                        discountAmount = this.discountValue;
-                    }
-                    total = subtotal - discountAmount;
-                }
-
-                document.getElementById('subtotal').textContent = `₹${subtotal.toFixed(2)}`;
-                document.getElementById('itemCount').textContent = this.cart.reduce((sum, item) => sum + item.quantity, 0);
-                document.getElementById('totalAmount').textContent = `₹${total.toFixed(2)}`;
-
-                const discountRow = document.getElementById('discountRow');
-                if (discountAmount > 0) {
-                    discountRow.style.display = 'flex';
-                    document.getElementById('discountAmount').textContent = `-₹${discountAmount.toFixed(2)}`;
-                } else {
-                    discountRow.style.display = 'none';
-                }
-
-                this.updateReceipt(subtotal, discountAmount, total);
-            },
-
-            applyDiscount() {
-                const discountInput = document.getElementById('discountInput').value.trim();
-
-                if (!discountInput) {
-                    this.showAlert('Please enter a discount value', 'error');
-                    return;
-                }
-
-                const value = parseFloat(discountInput);
-
-                if (isNaN(value) || value < 0) {
-                    this.showAlert('Please enter a valid discount value', 'error');
-                    return;
-                }
-
-                if (discountInput.includes('%')) {
-                    this.discountType = 'percentage';
-                    this.discountValue = value;
-                    this.showAlert(`✅ ${value}% discount applied`, 'success');
-                } else {
-                    this.discountType = 'fixed';
-                    this.discountValue = value;
-                    this.showAlert(`✅ ₹${value.toFixed(2)} discount applied`, 'success');
-                }
-
-                document.getElementById('discountInput').value = '';
-                this.updateSummary();
-            },
-
-            clearCart() {
-                if (this.cart.length === 0) {
-                    this.showAlert('Cart is already empty', 'info');
-                    return;
-                }
-
-                this.pendingAction = () => {
-                    this.cart = [];
-                    this.discountValue = 0;
-                    this.discountType = null;
-                    this.renderCart();
-                    this.updateSummary();
-                    this.showAlert('✅ Cart cleared', 'success');
-                };
-
-                this.showConfirm('Are you sure you want to clear the entire cart?');
-            },
-
-            printReceipt() {
-                if (this.cart.length === 0) {
-                    this.showAlert('Cart is empty. Add items before printing.', 'error');
-                    return;
-                }
-
-                const receiptElement = document.getElementById('receipt');
-                const printWindow = window.open('', '', 'width=400,height=600');
-                const content = receiptElement.innerHTML;
-
-                printWindow.document.write(`
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <title>Receipt</title>
-                        <style>
-                            body { font-family: 'Courier New', monospace; padding: 20px; margin: 0; background: white; }
-                            .receipt-header { text-align: center; border-bottom: 2px dashed #000; padding-bottom: 15px; margin-bottom: 15px; }
-                            .receipt-title { font-size: 16px; font-weight: bold; }
-                            .receipt-item { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-bottom: 8px; font-size: 12px; }
-                            .receipt-total { border-top: 2px dashed #000; border-bottom: 2px dashed #000; padding: 10px 0; margin: 10px 0; font-weight: bold; display: grid; grid-template-columns: 1fr auto; gap: 10px; }
-                            .receipt-footer { text-align: center; margin-top: 15px; font-size: 11px; color: #666; }
-                        </style>
-                    </head>
-                    <body>
-                        ${content}
-                    </body>
-                    </html>
-                `);
-                printWindow.document.close();
-                setTimeout(() => {
-                    printWindow.print();
-                    printWindow.close();
-                }, 250);
-            },
-
-            updateReceipt(subtotal, discountAmount, total) {
-                const receiptItems = document.getElementById('receiptItems');
-                receiptItems.innerHTML = this.cart.map(item => `
-                    <div class="receipt-item">
-                        <span>${this.escapeHtml(item.name)} x${item.quantity}</span>
-                        <span>₹${(item.price * item.quantity).toFixed(2)}</span>
-                    </div>
-                `).join('');
-
-                document.getElementById('receiptSubtotal').textContent = `₹${subtotal.toFixed(2)}`;
-                document.getElementById('receiptTotal').textContent = `₹${total.toFixed(2)}`;
-
-                const discountRow = document.getElementById('receiptDiscount');
-                if (discountAmount > 0) {
-                    discountRow.style.display = 'block';
-                    document.getElementById('receiptDiscountAmount').textContent = `-₹${discountAmount.toFixed(2)}`;
-                } else {
-                    discountRow.style.display = 'none';
-                }
-
-                const now = new Date();
-                const dateStr = now.toLocaleDateString('en-IN');
-                const timeStr = now.toLocaleTimeString('en-IN');
-                document.getElementById('receiptDate').textContent = dateStr;
-                document.getElementById('receiptTime').textContent = timeStr;
-                document.getElementById('receiptDateTime').textContent = `${dateStr} ${timeStr}`;
-            },
-
-            updateCameraStatus(message, type = 'info') {
-                const statusElement = document.getElementById('cameraStatus');
-                statusElement.textContent = message;
-                statusElement.className = `camera-status ${type === 'info' ? '' : type === 'active' ? 'active' : type === 'scanning' ? 'scanning' : 'error'}`;
-            },
-
-            showAlert(message, type = 'info') {
-                const container = document.getElementById('alertContainer');
-                const alert = document.createElement('div');
-                alert.className = `alert alert-${type}`;
-                alert.textContent = message;
-                container.appendChild(alert);
-
-                setTimeout(() => {
-                    alert.style.opacity = '0';
-                    alert.style.transition = 'opacity 0.3s ease';
-                    setTimeout(() => alert.remove(), 300);
-                }, 3000);
-            },
-
-            showConfirm(message) {
-                document.getElementById('confirmMessage').textContent = message;
-                document.getElementById('confirmModal').classList.add('active');
-            },
-
-            confirmAction(confirmed) {
-                document.getElementById('confirmModal').classList.remove('active');
-                if (confirmed && this.pendingAction) {
-                    this.pendingAction();
-                    this.pendingAction = null;
-                }
-            },
-
-            escapeHtml(text) {
-                const map = {
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    '"': '&quot;',
-                    "'": '&#039;'
-                };
-                return text.replace(/[&<>"']/g, m => map[m]);
+        // Define the barcode and QR code data
+        const barcodeData = {
+            '100100100': {
+                name: 'AMUL BUTTER',
+                price: 100
             }
         };
 
-        document.addEventListener('DOMContentLoaded', () => {
-            app.init();
-        });
+        // Define the cart and total
+        let cart = [];
+        let total = 0;
 
-        document.getElementById('confirmModal').addEventListener('click', (e) => {
-            if (e.target.id === 'confirmModal') {
-                app.confirmAction(false);
+        // Function to add an item to the cart
+        function addItemToCart(item) {
+            const existingItem = cart.find(cartItem => cartItem.barcode === item.barcode);
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                cart.push({ ...item, quantity: 1 });
+            }
+            updateCart();
+        }
+
+        // Function to update the cart
+        function updateCart() {
+            const cartItemsHtml = cart.map((item, index) => {
+                return `
+                    <div class="cart-item">
+                        <div>Barcode: ${item.barcode}</div>
+                        <div>Quantity: ${item.quantity}</div>
+                        <div>Price: ₹${item.price}</div>
+                        <div>Subtotal: ₹${item.price * item.quantity}</div>
+                        <button class="delete-btn" data-index="${index}">Delete</button>
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('cart-items').innerHTML = cartItemsHtml;
+            calculateTotal();
+        }
+
+        // Function to calculate the total
+        function calculateTotal() {
+            total = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+            document.getElementById('total').innerHTML = `Total: ₹${total}`;
+        }
+
+        // Function to apply discount
+        function applyDiscount() {
+            const discount = parseInt(document.getElementById('discount').value);
+            total = total - (total * (discount / 100));
+            document.getElementById('total').innerHTML = `Total: ₹${total}`;
+        }
+
+        // Function to print to PDF
+        function printToPdf() {
+            const pdf = new jsPDF();
+            pdf.text('Invoice', 10, 10);
+            pdf.text('-------------------------', 10, 20);
+            cart.forEach((item, index) => {
+                pdf.text(`Barcode: ${item.barcode}`, 10, 30 + index * 10);
+                pdf.text(`Quantity: ${item.quantity}`, 10, 40 + index * 10);
+                pdf.text(`Price: ₹${item.price}`, 10, 50 + index * 10);
+                pdf.text(`Subtotal: ₹${item.price * item.quantity}`, 10, 60 + index * 10);
+            });
+            pdf.text(`Total: ₹${total}`, 10, 70);
+            pdf.save('invoice.pdf');
+        }
+
+        // Add event listeners
+        document.getElementById('cart-items').addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-btn')) {
+                const index = e.target.dataset.index;
+                cart.splice(index, 1);
+                updateCart();
             }
         });
 
-        window.addEventListener('beforeunload', () => {
-            if (app.scannerActive) {
-                app.stopScanning();
+        document.getElementById('apply-discount').addEventListener('click', applyDiscount);
+
+        document.getElementById('print-btn').addEventListener('click', printToPdf);
+
+        // Initialize the camera
+        const video = document.createElement('video');
+        video.width = 640;
+        video.height = 480;
+        document.body.appendChild(video);
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then((stream) => {
+                video.srcObject = stream;
+                video.play();
+            })
+            .catch((error) => {
+                console.error('Error accessing camera:', error);
+            });
+
+        // Define the barcode and QR code scanning functions
+        function scanBarcode() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 640;
+            canvas.height = 480;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, 640, 480);
+            const imageData = ctx.getImageData(0, 0, 640, 480);
+            const code = jsQR(imageData.data, 640, 480);
+            if (code) {
+                const barcode = code.data;
+                const item = barcodeData[barcode];
+                if (item) {
+                    addItemToCart(item);
+                } else {
+                    console.log(`Unknown barcode: ${barcode}`);
+                }
             }
-        });
+        }
+
+        function scanQR() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 640;
+            canvas.height = 480;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, 640, 480);
+            const imageData = ctx.getImageData(0, 0, 640, 480);
+            const code = jsQR(imageData.data, 640, 480);
+            if (code) {
+                const qrCode = code.data;
+                console.log(`Scanned QR code: ${qrCode}`);
+            }
+        }
+
+        // Add event listener to scan button
+        document.getElementById('scan-btn').addEventListener('click', scanBarcode);
+
+        // Scan QR code every second
+        setInterval(scanQR, 1000);
     </script>
 </body>
 </html>

@@ -448,6 +448,29 @@
             font-size: 11px;
             color: #666;
         }
+
+        @media print {
+            body {
+                background: white;
+            }
+            .container, .scanner-section, .cart-section, .btn, .action-buttons {
+                display: none !important;
+            }
+            #receiptModal {
+                position: static;
+                display: block !important;
+                background: white;
+            }
+            .modal-content {
+                margin: 0;
+                box-shadow: none;
+                width: 100%;
+            }
+            .receipt {
+                width: 100%;
+                max-width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
@@ -566,6 +589,8 @@
         let scanner = null;
         let discount = 0;
         let isScanning = false;
+        let lastScannedBarcode = '';
+        let lastScanTime = 0;
 
         // DOM Elements
         const cartItemsContainer = document.getElementById('cartItems');
@@ -597,7 +622,7 @@
             html5QrcodeScanner.start(
                 { facingMode: 'environment' },
                 {
-                    fps: 10,
+                    fps: 3,
                     qrbox: { width: 250, height: 250 }
                 },
                 onScanSuccess,
@@ -628,6 +653,13 @@
         }
 
         function onScanSuccess(decodedText) {
+            const now = Date.now();
+            if (decodedText === lastScannedBarcode && now - lastScanTime < 2000) {
+                return;
+            }
+            lastScannedBarcode = decodedText;
+            lastScanTime = now;
+            
             addProductToCart(decodedText);
             barcodeInput.value = decodedText;
         }
@@ -832,20 +864,32 @@
             const receiptContent = document.getElementById('receiptContent');
             receiptContent.innerHTML = generateReceipt();
             receiptModal.style.display = 'block';
+            
+            setTimeout(() => {
+                window.print();
+            }, 500);
         }
 
         // Download PDF
         function downloadPDF() {
-            const element = document.getElementById('receiptContent');
+            if (cart.length === 0) {
+                showStatus('Cart is empty. Add items before downloading.', 'error');
+                return;
+            }
+
+            const receiptHTML = generateReceipt();
+            
             const opt = {
-                margin: 10,
+                margin: 5,
                 filename: `receipt_${Date.now()}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
+                html2canvas: { scale: 2, logging: false, useCORS: true },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
-            html2pdf().set(opt).from(element).save();
-            showStatus('PDF downloaded successfully!', 'success');
+            
+            html2pdf().set(opt).from(receiptHTML).save().then(() => {
+                showStatus('PDF downloaded successfully!', 'success');
+            });
         }
 
         // Show Status Message
@@ -883,6 +927,7 @@
         clearCartBtn.addEventListener('click', clearCart);
         printBtn.addEventListener('click', printReceipt);
         downloadPdfBtn.addEventListener('click', downloadPDF);
+        printReceiptBtn.addEventListener('click', () => window.print());
         closeModal.addEventListener('click', () => receiptModal.style.display = 'none');
 
         // Barcode Input Handler

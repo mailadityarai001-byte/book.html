@@ -3,210 +3,916 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Barcode and QR Reader POS System</title>
+    <title>POS System - Barcode & QR Scanner</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        /* Add some basic styling to our POS system */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             padding: 20px;
         }
-        .pos-container {
-            width: 80%;
-            margin: 40px auto;
-            padding: 20px;
-            border: 1px solid #ccc;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            height: 90vh;
         }
-        .cart-pane {
+
+        .scanner-section {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .cart-section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .cart-panel, .total-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .cart-panel {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 24px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .scanner-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+            flex: 1;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-danger {
+            background: #ff6b6b;
+            color: white;
+            padding: 8px 12px;
+            font-size: 12px;
+        }
+
+        .btn-danger:hover {
+            background: #ff5252;
+        }
+
+        .btn-success {
+            background: #51cf66;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #40c057;
+        }
+
+        #scanner-container {
+            width: 100%;
+            height: 300px;
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            background: #f9f9f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        #scanner-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .cart-item {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border-left: 4px solid #667eea;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .cart-item:hover {
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .item-details {
+            flex: 1;
+        }
+
+        .item-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .item-barcode {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 8px;
+        }
+
+        .item-price-qty {
+            display: flex;
+            gap: 15px;
+            font-size: 14px;
+        }
+
+        .item-price-qty span {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .item-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .qty-control {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            background: white;
+            border-radius: 6px;
+            padding: 5px;
+        }
+
+        .qty-control button {
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: #667eea;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .qty-control button:hover {
+            background: #764ba2;
+        }
+
+        .qty-control input {
+            width: 40px;
+            text-align: center;
+            border: none;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .total-panel {
+            padding: 25px;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .total-row.subtotal {
+            color: #666;
+        }
+
+        .total-row.discount {
+            color: #ff6b6b;
+        }
+
+        .total-row.grand-total {
+            font-size: 24px;
+            font-weight: 700;
+            color: #51cf66;
+            border-top: 2px solid #e0e0e0;
+            border-bottom: 2px solid #e0e0e0;
+            padding: 15px 0;
+        }
+
+        .discount-section {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .discount-section input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .discount-section button {
+            padding: 10px 15px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-buttons button {
+            flex: 1;
+        }
+
+        .status-message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: 600;
+            text-align: center;
+            display: none;
+        }
+
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+            display: block;
+        }
+
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            display: block;
+        }
+
+        .status-message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            display: block;
+        }
+
+        .empty-cart {
+            text-align: center;
+            color: #999;
+            padding: 40px 20px;
+            font-size: 16px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+        }
+
+        .receipt {
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+            max-width: 400px;
+        }
+
+        .receipt-header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px dashed #000;
+            padding-bottom: 15px;
+        }
+
+        .receipt-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .receipt-items {
+            margin-bottom: 20px;
+            border-bottom: 2px dashed #000;
+            padding-bottom: 15px;
+        }
+
+        .receipt-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .receipt-totals {
             margin-bottom: 20px;
         }
-        .cart-item {
-            padding: 10px;
-            border-bottom: 1px solid #ccc;
+
+        .receipt-total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 12px;
         }
-        .cart-item:last-child {
-            border-bottom: none;
-        }
-        .total-pane {
-            margin-top: 20px;
-        }
-        .total-pane .total {
+
+        .receipt-grand-total {
+            font-size: 14px;
             font-weight: bold;
+            border-top: 1px dashed #000;
+            border-bottom: 1px dashed #000;
+            padding: 8px 0;
         }
-        .discount-pane {
-            margin-top: 20px;
-        }
-        .discount-pane .discount {
-            font-weight: bold;
-        }
-        .print-pane {
-            margin-top: 20px;
-        }
-        .print-pane .print {
-            font-weight: bold;
+
+        .receipt-footer {
+            text-align: center;
+            font-size: 11px;
+            color: #666;
         }
     </style>
 </head>
 <body>
-    <div class="pos-container">
-        <div class="cart-pane">
-            <h2>Cart</h2>
-            <div id="cart-items"></div>
+    <div class="container">
+        <!-- Scanner Section -->
+        <div class="scanner-section">
+            <h2>📱 Scanner</h2>
+            <div class="status-message" id="statusMessage"></div>
+            
+            <div class="scanner-controls">
+                <button class="btn btn-primary" id="startScannerBtn">Start Camera</button>
+                <button class="btn btn-secondary" id="stopScannerBtn">Stop Camera</button>
+            </div>
+
+            <div id="scanner-container"></div>
+
+            <div class="input-group">
+                <input 
+                    type="text" 
+                    id="barcodeInput" 
+                    placeholder="Or manually enter barcode/QR code here..."
+                    autocomplete="off"
+                >
+            </div>
+
+            <div class="input-group">
+                <input 
+                    type="text" 
+                    id="productNameInput" 
+                    placeholder="Product Name (for manual entry)"
+                    autocomplete="off"
+                >
+                <input 
+                    type="number" 
+                    id="productPriceInput" 
+                    placeholder="Price"
+                    step="0.01"
+                    autocomplete="off"
+                >
+            </div>
+
+            <button class="btn btn-success" id="addManualProductBtn">Add Manual Product</button>
         </div>
-        <div class="total-pane">
-            <h2>Total</h2>
-            <div id="total"></div>
-        </div>
-        <div class="discount-pane">
-            <h2>Discount</h2>
-            <input type="number" id="discount" placeholder="Enter discount percentage">
-            <button id="apply-discount">Apply</button>
-        </div>
-        <div class="print-pane">
-            <h2>Print</h2>
-            <button id="print-btn">Print to PDF</button>
+
+        <!-- Cart Section -->
+        <div class="cart-section">
+            <div class="cart-panel">
+                <h2>🛒 Cart</h2>
+                <div id="cartItems" class="empty-cart">Cart is empty. Start scanning!</div>
+            </div>
+
+            <!-- Total Section -->
+            <div class="total-panel">
+                <h2>💰 Billing</h2>
+                
+                <div class="total-row subtotal">
+                    <span>Subtotal:</span>
+                    <span id="subtotalAmount">₹0.00</span>
+                </div>
+
+                <div class="discount-section">
+                    <input 
+                        type="number" 
+                        id="discountInput" 
+                        placeholder="Discount %" 
+                        min="0" 
+                        max="100"
+                        step="0.01"
+                    >
+                    <button class="btn btn-secondary" id="applyDiscountBtn">Apply</button>
+                </div>
+
+                <div class="total-row discount" id="discountRow" style="display: none;">
+                    <span>Discount:</span>
+                    <span id="discountAmount">₹0.00</span>
+                </div>
+
+                <div class="total-row grand-total">
+                    <span>Total:</span>
+                    <span id="grandTotalAmount">₹0.00</span>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-danger" id="clearCartBtn">Clear Cart</button>
+                    <button class="btn btn-success" id="printBtn">Print Receipt</button>
+                </div>
+            </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.1.0/dist/jsQR.js"></script>
+    <!-- Receipt Modal -->
+    <div id="receiptModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeModal">&times;</span>
+            <div id="receiptContent" class="receipt"></div>
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <button class="btn btn-primary" style="flex: 1;" id="downloadPdfBtn">Download PDF</button>
+                <button class="btn btn-secondary" style="flex: 1;" id="printReceiptBtn">Print</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // Define the barcode and QR code data
-        const barcodeData = {
-            '100100100': {
-                name: 'AMUL BUTTER',
-                price: 100
-            }
+        // Product Database
+        const productDatabase = {
+            '100100100': { name: 'AMUL BUTTER', price: 100 },
+            '200200200': { name: 'AMUL MILK 1L', price: 60 },
+            '300300300': { name: 'AMUL CHEESE', price: 150 },
+            '400400400': { name: 'AMUL GHEE', price: 500 },
+            '500500500': { name: 'AMUL CURD', price: 40 },
+            '8901234567890': { name: 'SAMPLE PRODUCT', price: 250 },
         };
 
-        // Define the cart and total
+        // State Management
         let cart = [];
-        let total = 0;
+        let scanner = null;
+        let discount = 0;
+        let isScanning = false;
 
-        // Function to add an item to the cart
-        function addItemToCart(item) {
-            const existingItem = cart.find(cartItem => cartItem.barcode === item.barcode);
-            if (existingItem) {
-                existingItem.quantity += 1;
-            } else {
-                cart.push({ ...item, quantity: 1 });
-            }
-            updateCart();
+        // DOM Elements
+        const cartItemsContainer = document.getElementById('cartItems');
+        const startScannerBtn = document.getElementById('startScannerBtn');
+        const stopScannerBtn = document.getElementById('stopScannerBtn');
+        const barcodeInput = document.getElementById('barcodeInput');
+        const productNameInput = document.getElementById('productNameInput');
+        const productPriceInput = document.getElementById('productPriceInput');
+        const addManualProductBtn = document.getElementById('addManualProductBtn');
+        const subtotalAmountEl = document.getElementById('subtotalAmount');
+        const discountAmountEl = document.getElementById('discountAmount');
+        const grandTotalAmountEl = document.getElementById('grandTotalAmount');
+        const discountInputEl = document.getElementById('discountInput');
+        const applyDiscountBtn = document.getElementById('applyDiscountBtn');
+        const clearCartBtn = document.getElementById('clearCartBtn');
+        const printBtn = document.getElementById('printBtn');
+        const statusMessage = document.getElementById('statusMessage');
+        const receiptModal = document.getElementById('receiptModal');
+        const closeModal = document.getElementById('closeModal');
+        const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+        const printReceiptBtn = document.getElementById('printReceiptBtn');
+
+        // Initialize Scanner
+        function initScanner() {
+            if (isScanning) return;
+            
+            const html5QrcodeScanner = new Html5Qrcode('scanner-container');
+            
+            html5QrcodeScanner.start(
+                { facingMode: 'environment' },
+                {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 }
+                },
+                onScanSuccess,
+                onScanError
+            ).then(() => {
+                isScanning = true;
+                scanner = html5QrcodeScanner;
+                showStatus('Camera started successfully!', 'success');
+                startScannerBtn.disabled = true;
+                stopScannerBtn.disabled = false;
+            }).catch(() => {
+                showStatus('Error accessing camera. Please check permissions.', 'error');
+            });
         }
 
-        // Function to update the cart
-        function updateCart() {
-            const cartItemsHtml = cart.map((item, index) => {
-                return `
-                    <div class="cart-item">
-                        <div>Barcode: ${item.barcode}</div>
-                        <div>Quantity: ${item.quantity}</div>
-                        <div>Price: ₹${item.price}</div>
-                        <div>Subtotal: ₹${item.price * item.quantity}</div>
-                        <button class="delete-btn" data-index="${index}">Delete</button>
+        function stopScanner() {
+            if (scanner && isScanning) {
+                scanner.stop().then(() => {
+                    isScanning = false;
+                    scanner = null;
+                    showStatus('Camera stopped', 'info');
+                    startScannerBtn.disabled = false;
+                    stopScannerBtn.disabled = true;
+                }).catch(() => {
+                    showStatus('Error stopping camera', 'error');
+                });
+            }
+        }
+
+        function onScanSuccess(decodedText) {
+            addProductToCart(decodedText);
+            barcodeInput.value = decodedText;
+        }
+
+        function onScanError(error) {
+            // Silently ignore scan errors
+        }
+
+        // Add Product to Cart
+        function addProductToCart(barcodeId) {
+            const product = productDatabase[barcodeId];
+            
+            if (!product) {
+                showStatus(`Product not found for barcode: ${barcodeId}`, 'error');
+                return;
+            }
+
+            const existingItem = cart.find(item => item.barcode === barcodeId);
+            
+            if (existingItem) {
+                existingItem.quantity++;
+            } else {
+                cart.push({
+                    barcode: barcodeId,
+                    name: product.name,
+                    price: product.price,
+                    quantity: 1
+                });
+            }
+
+            showStatus(`${product.name} added to cart!`, 'success');
+            renderCart();
+            updateTotals();
+        }
+
+        // Render Cart
+        function renderCart() {
+            if (cart.length === 0) {
+                cartItemsContainer.innerHTML = '<div class="empty-cart">Cart is empty. Start scanning!</div>';
+                return;
+            }
+
+            cartItemsContainer.innerHTML = cart.map((item, index) => `
+                <div class="cart-item">
+                    <div class="item-details">
+                        <div class="item-name">${item.name}</div>
+                        <div class="item-barcode">ID: ${item.barcode}</div>
+                        <div class="item-price-qty">
+                            <span>₹${item.price.toFixed(2)}</span>
+                            <span>× ${item.quantity}</span>
+                            <span style="color: #51cf66;">= ₹${(item.price * item.quantity).toFixed(2)}</span>
+                        </div>
+                    </div>
+                    <div class="item-controls">
+                        <div class="qty-control">
+                            <button onclick="decreaseQty(${index})">−</button>
+                            <input type="number" value="${item.quantity}" readonly>
+                            <button onclick="increaseQty(${index})">+</button>
+                        </div>
+                        <button class="btn btn-danger" onclick="removeItem(${index})">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function increaseQty(index) {
+            cart[index].quantity++;
+            renderCart();
+            updateTotals();
+        }
+
+        function decreaseQty(index) {
+            if (cart[index].quantity > 1) {
+                cart[index].quantity--;
+                renderCart();
+                updateTotals();
+            }
+        }
+
+        function removeItem(index) {
+            cart.splice(index, 1);
+            renderCart();
+            updateTotals();
+        }
+
+        // Update Totals
+        function updateTotals() {
+            const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const discountAmount = (subtotal * discount) / 100;
+            const total = subtotal - discountAmount;
+
+            subtotalAmountEl.textContent = `₹${subtotal.toFixed(2)}`;
+            discountAmountEl.textContent = `₹${discountAmount.toFixed(2)}`;
+            grandTotalAmountEl.textContent = `₹${total.toFixed(2)}`;
+
+            if (discount > 0) {
+                document.getElementById('discountRow').style.display = 'flex';
+            } else {
+                document.getElementById('discountRow').style.display = 'none';
+            }
+        }
+
+        // Apply Discount
+        function applyDiscount() {
+            const discountValue = parseFloat(discountInputEl.value) || 0;
+            if (discountValue >= 0 && discountValue <= 100) {
+                discount = discountValue;
+                updateTotals();
+                showStatus(`Discount of ${discount}% applied!`, 'success');
+            } else {
+                showStatus('Please enter a valid discount (0-100%)', 'error');
+            }
+        }
+
+        // Clear Cart
+        function clearCart() {
+            if (cart.length === 0) {
+                showStatus('Cart is already empty', 'info');
+                return;
+            }
+            if (confirm('Are you sure you want to clear the entire cart?')) {
+                cart = [];
+                discount = 0;
+                discountInputEl.value = '';
+                renderCart();
+                updateTotals();
+                showStatus('Cart cleared!', 'success');
+            }
+        }
+
+        // Generate Receipt
+        function generateReceipt() {
+            const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const discountAmount = (subtotal * discount) / 100;
+            const total = subtotal - discountAmount;
+            const timestamp = new Date().toLocaleString();
+
+            let receiptHTML = `
+                <div class="receipt-header">
+                    <div class="receipt-title">POS RECEIPT</div>
+                    <div>${timestamp}</div>
+                </div>
+
+                <div class="receipt-items">
+                    <div style="margin-bottom: 10px; font-weight: bold; display: flex; justify-content: space-between;">
+                        <span>Item</span>
+                        <span>Qty × Price = Amount</span>
+                    </div>
+            `;
+
+            cart.forEach(item => {
+                const itemTotal = (item.price * item.quantity).toFixed(2);
+                receiptHTML += `
+                    <div class="receipt-item">
+                        <div>${item.name}</div>
+                        <div>${item.quantity} × ₹${item.price.toFixed(2)} = ₹${itemTotal}</div>
                     </div>
                 `;
-            }).join('');
-            document.getElementById('cart-items').innerHTML = cartItemsHtml;
-            calculateTotal();
-        }
-
-        // Function to calculate the total
-        function calculateTotal() {
-            total = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
-            document.getElementById('total').innerHTML = `Total: ₹${total}`;
-        }
-
-        // Function to apply discount
-        function applyDiscount() {
-            const discount = parseInt(document.getElementById('discount').value);
-            total = total - (total * (discount / 100));
-            document.getElementById('total').innerHTML = `Total: ₹${total}`;
-        }
-
-        // Function to print to PDF
-        function printToPdf() {
-            const pdf = new jsPDF();
-            pdf.text('Invoice', 10, 10);
-            pdf.text('-------------------------', 10, 20);
-            cart.forEach((item, index) => {
-                pdf.text(`Barcode: ${item.barcode}`, 10, 30 + index * 10);
-                pdf.text(`Quantity: ${item.quantity}`, 10, 40 + index * 10);
-                pdf.text(`Price: ₹${item.price}`, 10, 50 + index * 10);
-                pdf.text(`Subtotal: ₹${item.price * item.quantity}`, 10, 60 + index * 10);
             });
-            pdf.text(`Total: ₹${total}`, 10, 70);
-            pdf.save('invoice.pdf');
+
+            receiptHTML += `</div><div class="receipt-totals">`;
+
+            receiptHTML += `
+                <div class="receipt-total-row">
+                    <span>Subtotal:</span>
+                    <span>₹${subtotal.toFixed(2)}</span>
+                </div>
+            `;
+
+            if (discount > 0) {
+                receiptHTML += `
+                    <div class="receipt-total-row">
+                        <span>Discount (${discount}%):</span>
+                        <span>-₹${discountAmount.toFixed(2)}</span>
+                    </div>
+                `;
+            }
+
+            receiptHTML += `
+                <div class="receipt-total-row receipt-grand-total">
+                    <span>Total:</span>
+                    <span>₹${total.toFixed(2)}</span>
+                </div>
+            </div>
+
+            <div class="receipt-footer">
+                <p>Thank you for your purchase!</p>
+                <p>Items: ${cart.length} | Total Qty: ${cart.reduce((sum, item) => sum + item.quantity, 0)}</p>
+            </div>
+            `;
+
+            return receiptHTML;
         }
 
-        // Add event listeners
-        document.getElementById('cart-items').addEventListener('click', (e) => {
-            if (e.target.classList.contains('delete-btn')) {
-                const index = e.target.dataset.index;
-                cart.splice(index, 1);
-                updateCart();
+        // Print Receipt
+        function printReceipt() {
+            if (cart.length === 0) {
+                showStatus('Cart is empty. Add items before printing.', 'error');
+                return;
+            }
+
+            const receiptContent = document.getElementById('receiptContent');
+            receiptContent.innerHTML = generateReceipt();
+            receiptModal.style.display = 'block';
+        }
+
+        // Download PDF
+        function downloadPDF() {
+            const element = document.getElementById('receiptContent');
+            const opt = {
+                margin: 10,
+                filename: `receipt_${Date.now()}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(element).save();
+            showStatus('PDF downloaded successfully!', 'success');
+        }
+
+        // Show Status Message
+        function showStatus(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = `status-message ${type}`;
+            setTimeout(() => {
+                statusMessage.className = 'status-message';
+            }, 4000);
+        }
+
+        // Manual Product Addition
+        function addManualProduct() {
+            const name = productNameInput.value.trim();
+            const price = parseFloat(productPriceInput.value);
+
+            if (!name || !price || price <= 0) {
+                showStatus('Please enter valid product name and price', 'error');
+                return;
+            }
+
+            const barcode = `MANUAL_${Date.now()}`;
+            productDatabase[barcode] = { name, price };
+            addProductToCart(barcode);
+
+            productNameInput.value = '';
+            productPriceInput.value = '';
+        }
+
+        // Event Listeners
+        startScannerBtn.addEventListener('click', initScanner);
+        stopScannerBtn.addEventListener('click', stopScanner);
+        addManualProductBtn.addEventListener('click', addManualProduct);
+        applyDiscountBtn.addEventListener('click', applyDiscount);
+        clearCartBtn.addEventListener('click', clearCart);
+        printBtn.addEventListener('click', printReceipt);
+        downloadPdfBtn.addEventListener('click', downloadPDF);
+        closeModal.addEventListener('click', () => receiptModal.style.display = 'none');
+
+        // Barcode Input Handler
+        barcodeInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const barcode = barcodeInput.value.trim();
+                if (barcode) {
+                    addProductToCart(barcode);
+                    barcodeInput.value = '';
+                }
             }
         });
 
-        document.getElementById('apply-discount').addEventListener('click', applyDiscount);
-
-        document.getElementById('print-btn').addEventListener('click', printToPdf);
-
-        // Initialize the camera
-        const video = document.createElement('video');
-        video.width = 640;
-        video.height = 480;
-        document.body.appendChild(video);
-
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then((stream) => {
-                video.srcObject = stream;
-                video.play();
-            })
-            .catch((error) => {
-                console.error('Error accessing camera:', error);
-            });
-
-        // Define the barcode and QR code scanning functions
-        function scanBarcode() {
-            const canvas = document.createElement('canvas');
-            canvas.width = 640;
-            canvas.height = 480;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, 640, 480);
-            const imageData = ctx.getImageData(0, 0, 640, 480);
-            const code = jsQR(imageData.data, 640, 480);
-            if (code) {
-                const barcode = code.data;
-                const item = barcodeData[barcode];
-                if (item) {
-                    addItemToCart(item);
-                } else {
-                    console.log(`Unknown barcode: ${barcode}`);
-                }
+        // Product Price Input Handler
+        productPriceInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                addManualProduct();
             }
-        }
+        });
 
-        function scanQR() {
-            const canvas = document.createElement('canvas');
-            canvas.width = 640;
-            canvas.height = 480;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, 640, 480);
-            const imageData = ctx.getImageData(0, 0, 640, 480);
-            const code = jsQR(imageData.data, 640, 480);
-            if (code) {
-                const qrCode = code.data;
-                console.log(`Scanned QR code: ${qrCode}`);
+        // Close modal on outside click
+        window.addEventListener('click', (e) => {
+            if (e.target === receiptModal) {
+                receiptModal.style.display = 'none';
             }
-        }
+        });
 
-        // Add event listener to scan button
-        document.getElementById('scan-btn').addEventListener('click', scanBarcode);
-
-        // Scan QR code every second
-        setInterval(scanQR, 1000);
+        // Initialize
+        stopScannerBtn.disabled = true;
+        updateTotals();
     </script>
 </body>
 </html>

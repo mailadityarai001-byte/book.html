@@ -6,7 +6,7 @@
     <title>POS Barcode & QR Scanner</title>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -178,12 +178,17 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            border: 3px solid var(--primary);
         }
 
-        #video {
+        #scanner-container {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            position: relative;
+        }
+
+        .drawingBuffer {
+            display: none;
         }
 
         .camera-overlay {
@@ -197,6 +202,7 @@
             border-radius: 8px;
             box-shadow: inset 0 0 20px rgba(16, 185, 129, 0.3);
             pointer-events: none;
+            z-index: 10;
         }
 
         .camera-overlay::before {
@@ -229,6 +235,7 @@
             font-size: 0.9rem;
             color: #0c2d6b;
             margin-bottom: 15px;
+            font-weight: 600;
         }
 
         .camera-status.active {
@@ -241,6 +248,12 @@
             background: #fee2e2;
             border-left-color: var(--danger);
             color: #991b1b;
+        }
+
+        .camera-status.scanning {
+            background: #fef3c7;
+            border-left-color: var(--warning);
+            color: #78350f;
         }
 
         .cart-container {
@@ -677,6 +690,19 @@
             width: 0;
             height: 0;
         }
+
+        .detected-code {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(16, 185, 129, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            z-index: 20;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -695,19 +721,17 @@
             </div>
 
             <div class="camera-container">
-                <video id="video" playsinline></video>
+                <div id="scanner-container"></div>
                 <div class="camera-overlay"></div>
+                <div id="detectedCode" class="detected-code" style="display: none;"></div>
             </div>
 
             <div class="camera-controls">
-                <button class="btn btn-primary" id="startCameraBtn" onclick="app.startCamera()">
-                    ▶️ Start Camera
+                <button class="btn btn-primary" id="startCameraBtn" onclick="app.startScanning()">
+                    ▶️ Start Scanning
                 </button>
-                <button class="btn btn-danger" id="stopCameraBtn" onclick="app.stopCamera()" style="display: none;">
-                    ⏹️ Stop Camera
-                </button>
-                <button class="btn btn-warning" onclick="app.toggleFlash()">
-                    💡 Toggle Flash
+                <button class="btn btn-danger" id="stopCameraBtn" onclick="app.stopScanning()" style="display: none;">
+                    ⏹️ Stop Scanning
                 </button>
             </div>
 
@@ -857,18 +881,14 @@
     </div>
 
     <script>
-        const { BrowserMultiFormatReader, NotFoundException } = ZXing;
-
         const app = {
             cart: [],
             discountType: null,
             discountValue: 0,
             pendingAction: null,
-            codeReader: null,
-            videoElement: null,
-            cameraActive: false,
+            scannerActive: false,
             lastScannedCode: null,
-            scanDebounceTime: 500,
+            scanDebounceTime: 1000,
             lastScanTime: 0,
 
             products: {
@@ -882,91 +902,118 @@
                 '6666666666': { name: 'Milk', price: 100 },
                 '7777777777': { name: 'Sprite', price: 100 },
                 '8888888888': { name: 'Fanta', price: 100 },
+                '9999999999': { name: 'Thumbs Up', price: 100 },
+                '0000000000': { name: 'Maaza', price: 100 },
             },
 
             init() {
-                this.videoElement = document.getElementById('video');
-                this.codeReader = new BrowserMultiFormatReader();
-
                 const manualInput = document.getElementById('manualBarcodeInput');
                 manualInput.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') {
                         this.addFromManualInput();
                     }
                 });
-
                 this.updateSummary();
-                this.showAlert('Click "Start Camera" to begin scanning', 'info');
-            },
-
-            async startCamera() {
-                try {
-                    this.updateCameraStatus('📹 Starting camera...', 'info');
-                    document.getElementById('startCameraBtn').disabled = true;
-
-                    const constraints = {
-                        video: {
-                            facingMode: 'environment',
-                            width: { ideal: 1280 },
-                            height: { ideal: 720 }
-                        }
-                    };
-
-                    const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                    this.videoElement.srcObject = stream;
-
-                    this.videoElement.onloadedmetadata = () => {
-                        this.videoElement.play();
-                        this.cameraActive = true;
-                        document.getElementById('startCameraBtn').style.display = 'none';
-                        document.getElementById('stopCameraBtn').style.display = 'flex';
-                        this.updateCameraStatus('📹 Camera Active - Ready to Scan', 'active');
-                        this.startScanning();
-                    };
-                } catch (error) {
-                    this.updateCameraStatus('❌ Camera Error: ' + error.message, 'error');
-                    this.showAlert('Camera access denied: ' + error.message, 'error');
-                    document.getElementById('startCameraBtn').disabled = false;
-                }
-            },
-
-            stopCamera() {
-                try {
-                    const stream = this.videoElement.srcObject;
-                    if (stream) {
-                        stream.getTracks().forEach(track => track.stop());
-                    }
-                    this.videoElement.srcObject = null;
-                    this.cameraActive = false;
-                    document.getElementById('startCameraBtn').style.display = 'flex';
-                    document.getElementById('stopCameraBtn').style.display = 'none';
-                    document.getElementById('startCameraBtn').disabled = false;
-                    this.updateCameraStatus('📹 Camera: Stopped', 'info');
-                } catch (error) {
-                    this.showAlert('Error stopping camera', 'error');
-                }
+                this.showAlert('Click "Start Scanning" to begin scanning barcodes', 'info');
             },
 
             startScanning() {
-                if (!this.cameraActive) return;
+                try {
+                    this.updateCameraStatus('📹 Initializing scanner...', 'info');
+                    document.getElementById('startCameraBtn').disabled = true;
 
-                this.codeReader.decodeFromVideoElement(this.videoElement, (result, err) => {
-                    if (result) {
-                        const scannedCode = result.getText();
+                    Quagga.init({
+                        inputStream: {
+                            name: "Live",
+                            type: "LiveStream",
+                            target: document.querySelector('#scanner-container'),
+                            constraints: {
+                                facingMode: "environment",
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 }
+                            }
+                        },
+                        decoder: {
+                            workers: 2,
+                            debug: false,
+                            multiple: false,
+                            formats: ['code_128', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'qr_code', 'data_matrix', 'aztec']
+                        },
+                        locator: {
+                            halfSample: true
+                        }
+                    }, (err) => {
+                        if (err) {
+                            this.updateCameraStatus('❌ Scanner Error: ' + err.message, 'error');
+                            this.showAlert('Scanner initialization failed: ' + err.message, 'error');
+                            document.getElementById('startCameraBtn').disabled = false;
+                            return;
+                        }
+                        this.scannerActive = true;
+                        Quagga.start();
+                        this.updateCameraStatus('📹 Scanner Active - Point at barcode', 'active');
+                        document.getElementById('startCameraBtn').style.display = 'none';
+                        document.getElementById('stopCameraBtn').style.display = 'flex';
+                        this.setupScannerListeners();
+                    });
+                } catch (error) {
+                    this.updateCameraStatus('❌ Error: ' + error.message, 'error');
+                    this.showAlert('Failed to start scanner: ' + error.message, 'error');
+                    document.getElementById('startCameraBtn').disabled = false;
+                }
+            },
+
+            setupScannerListeners() {
+                Quagga.onDetected((result) => {
+                    if (result && result.codeResult && result.codeResult.code) {
+                        const barcode = result.codeResult.code;
                         const currentTime = Date.now();
 
-                        if (scannedCode !== this.lastScannedCode || 
-                            currentTime - this.lastScanTime > this.scanDebounceTime) {
-                            this.lastScannedCode = scannedCode;
+                        if (barcode !== this.lastScannedCode || currentTime - this.lastScanTime > this.scanDebounceTime) {
+                            this.lastScannedCode = barcode;
                             this.lastScanTime = currentTime;
-                            this.processScan(scannedCode);
+                            this.updateCameraStatus('✅ Barcode Detected: ' + barcode, 'scanning');
+                            document.getElementById('detectedCode').textContent = '✓ ' + barcode;
+                            document.getElementById('detectedCode').style.display = 'block';
+                            setTimeout(() => {
+                                document.getElementById('detectedCode').style.display = 'none';
+                            }, 2000);
+                            this.processScan(barcode);
                         }
                     }
+                });
 
-                    if (this.cameraActive) {
-                        requestAnimationFrame(() => this.startScanning());
+                Quagga.onProcessed((result) => {
+                    if (result && result.boxes) {
+                        let drawingCtx = Quagga.canvas.ctx.overlay;
+                        if (drawingCtx) {
+                            drawingCtx.clearRect(0, 0, parseInt(Quagga.canvas.dom.overlay.getAttribute('width')), parseInt(Quagga.canvas.dom.overlay.getAttribute('height')));
+                            if (result.boxes.filter(box => box !== result.box).length > 0) {
+                                drawingCtx.strokeStyle = '#10b981';
+                                result.boxes.filter(box => box !== result.box).forEach(box => {
+                                    Quagga.ImageDebug.drawPath(box, { x: 0, y: 1 }, drawingCtx);
+                                });
+                            }
+                            if (result.box) {
+                                drawingCtx.strokeStyle = '#ef4444';
+                                Quagga.ImageDebug.drawPath(result.box, { x: 0, y: 1 }, drawingCtx);
+                            }
+                        }
                     }
                 });
+            },
+
+            stopScanning() {
+                try {
+                    Quagga.stop();
+                    this.scannerActive = false;
+                    document.getElementById('startCameraBtn').style.display = 'flex';
+                    document.getElementById('stopCameraBtn').style.display = 'none';
+                    document.getElementById('startCameraBtn').disabled = false;
+                    this.updateCameraStatus('📹 Scanner: Stopped', 'info');
+                } catch (error) {
+                    this.showAlert('Error stopping scanner', 'error');
+                }
             },
 
             processScan(barcode) {
@@ -1159,10 +1206,11 @@
                     <head>
                         <title>Receipt</title>
                         <style>
-                            body { font-family: 'Courier New', monospace; padding: 20px; margin: 0; }
+                            body { font-family: 'Courier New', monospace; padding: 20px; margin: 0; background: white; }
                             .receipt-header { text-align: center; border-bottom: 2px dashed #000; padding-bottom: 15px; margin-bottom: 15px; }
                             .receipt-title { font-size: 16px; font-weight: bold; }
-                            .receipt-item { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+                            .receipt-item { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-bottom: 8px; font-size: 12px; }
+                            .receipt-total { border-top: 2px dashed #000; border-bottom: 2px dashed #000; padding: 10px 0; margin: 10px 0; font-weight: bold; display: grid; grid-template-columns: 1fr auto; gap: 10px; }
                             .receipt-footer { text-align: center; margin-top: 15px; font-size: 11px; color: #666; }
                         </style>
                     </head>
@@ -1209,24 +1257,7 @@
             updateCameraStatus(message, type = 'info') {
                 const statusElement = document.getElementById('cameraStatus');
                 statusElement.textContent = message;
-                statusElement.className = `camera-status ${type === 'info' ? '' : type === 'active' ? 'active' : 'error'}`;
-            },
-
-            toggleFlash() {
-                if (!this.cameraActive) {
-                    this.showAlert('Start camera first', 'error');
-                    return;
-                }
-
-                const videoTrack = this.videoElement.srcObject.getVideoTracks();
-                if (videoTrack && videoTrack.getCapabilities().torch) {
-                    videoTrack.getSettings().torch 
-                        ? videoTrack.applyConstraints({ advanced: [{ torch: false }] })
-                        : videoTrack.applyConstraints({ advanced: [{ torch: true }] });
-                    this.showAlert('💡 Flash toggled', 'success');
-                } else {
-                    this.showAlert('Flash not available on this device', 'error');
-                }
+                statusElement.className = `camera-status ${type === 'info' ? '' : type === 'active' ? 'active' : type === 'scanning' ? 'scanning' : 'error'}`;
             },
 
             showAlert(message, type = 'info') {
@@ -1279,8 +1310,8 @@
         });
 
         window.addEventListener('beforeunload', () => {
-            if (app.cameraActive) {
-                app.stopCamera();
+            if (app.scannerActive) {
+                app.stopScanning();
             }
         });
     </script>

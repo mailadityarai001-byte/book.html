@@ -6,6 +6,7 @@
     <title>POS Barcode & QR Scanner</title>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -127,6 +128,12 @@
             box-shadow: var(--shadow-lg);
         }
 
+        .btn-primary:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .btn-secondary {
             background: var(--secondary);
             color: white;
@@ -159,6 +166,81 @@
         .btn-small {
             padding: 8px 12px;
             font-size: 0.875rem;
+        }
+
+        .camera-container {
+            position: relative;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            aspect-ratio: 4/3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .camera-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70%;
+            height: 70%;
+            border: 3px solid #10b981;
+            border-radius: 8px;
+            box-shadow: inset 0 0 20px rgba(16, 185, 129, 0.3);
+            pointer-events: none;
+        }
+
+        .camera-overlay::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, transparent 0%, rgba(16, 185, 129, 0.1) 50%, transparent 100%);
+            animation: scan 2s infinite;
+        }
+
+        @keyframes scan {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+
+        .camera-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .camera-status {
+            padding: 10px 15px;
+            background: #dbeafe;
+            border-left: 4px solid var(--primary);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            color: #0c2d6b;
+            margin-bottom: 15px;
+        }
+
+        .camera-status.active {
+            background: #d1fae5;
+            border-left-color: var(--secondary);
+            color: #065f46;
+        }
+
+        .camera-status.error {
+            background: #fee2e2;
+            border-left-color: var(--danger);
+            color: #991b1b;
         }
 
         .cart-container {
@@ -520,7 +602,7 @@
                 box-shadow: none;
                 border: 1px solid var(--border-color);
             }
-            .header, .input-group, .action-buttons, .scanner-section {
+            .header, .input-group, .action-buttons, .scanner-section, .camera-container, .camera-controls {
                 display: none;
             }
         }
@@ -566,24 +648,34 @@
             .action-buttons {
                 grid-template-columns: 1fr;
             }
+
+            .camera-controls {
+                flex-direction: column;
+            }
+
+            .camera-controls .btn {
+                width: 100%;
+            }
         }
 
         .hidden {
             display: none !important;
         }
 
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 0.8s linear infinite;
+        .pulse {
+            animation: pulse 0.5s ease;
         }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .scanner-input-hidden {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
         }
     </style>
 </head>
@@ -592,22 +684,42 @@
         <!-- Scanner Panel -->
         <div class="panel">
             <div class="header">
-                <h2>📱 Scanner</h2>
+                <h2>📱 Barcode/QR Scanner</h2>
                 <span style="font-size: 2rem;">🔍</span>
             </div>
 
             <div id="alertContainer"></div>
 
+            <div class="camera-status" id="cameraStatus">
+                📹 Camera: Ready to start
+            </div>
+
+            <div class="camera-container">
+                <video id="video" playsinline></video>
+                <div class="camera-overlay"></div>
+            </div>
+
+            <div class="camera-controls">
+                <button class="btn btn-primary" id="startCameraBtn" onclick="app.startCamera()">
+                    ▶️ Start Camera
+                </button>
+                <button class="btn btn-danger" id="stopCameraBtn" onclick="app.stopCamera()" style="display: none;">
+                    ⏹️ Stop Camera
+                </button>
+                <button class="btn btn-warning" onclick="app.toggleFlash()">
+                    💡 Toggle Flash
+                </button>
+            </div>
+
             <div class="scanner-section">
                 <div class="input-group">
                     <input 
                         type="text" 
-                        id="scannerInput" 
+                        id="manualBarcodeInput" 
                         class="input-field" 
-                        placeholder="Scan barcode/QR or enter manually..."
-                        autofocus
+                        placeholder="Or enter barcode manually..."
                     >
-                    <button class="btn btn-primary" onclick="app.addItem()">Add Item</button>
+                    <button class="btn btn-secondary" onclick="app.addFromManualInput()">Add</button>
                 </div>
 
                 <div class="input-group">
@@ -645,7 +757,7 @@
                 <div id="cartItems" class="cart-items">
                     <div class="empty-cart">
                         <div class="empty-cart-icon">🛒</div>
-                        <p>Cart is empty. Scan or add items to get started.</p>
+                        <p>Cart is empty. Scan items to get started.</p>
                     </div>
                 </div>
             </div>
@@ -745,13 +857,20 @@
     </div>
 
     <script>
+        const { BrowserMultiFormatReader, NotFoundException } = ZXing;
+
         const app = {
             cart: [],
             discountType: null,
             discountValue: 0,
             pendingAction: null,
+            codeReader: null,
+            videoElement: null,
+            cameraActive: false,
+            lastScannedCode: null,
+            scanDebounceTime: 500,
+            lastScanTime: 0,
 
-            // Sample product database
             products: {
                 '1234567890': { name: 'Coca Cola', price: 100 },
                 '9876543210': { name: 'Pepsi', price: 100 },
@@ -761,20 +880,102 @@
                 '4444444444': { name: 'Tea', price: 100 },
                 '5555555555': { name: 'Juice', price: 100 },
                 '6666666666': { name: 'Milk', price: 100 },
+                '7777777777': { name: 'Sprite', price: 100 },
+                '8888888888': { name: 'Fanta', price: 100 },
             },
 
             init() {
-                const scannerInput = document.getElementById('scannerInput');
-                scannerInput.addEventListener('keypress', (e) => {
+                this.videoElement = document.getElementById('video');
+                this.codeReader = new BrowserMultiFormatReader();
+
+                const manualInput = document.getElementById('manualBarcodeInput');
+                manualInput.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') {
-                        this.addItem();
+                        this.addFromManualInput();
                     }
                 });
+
                 this.updateSummary();
+                this.showAlert('Click "Start Camera" to begin scanning', 'info');
             },
 
-            addItem() {
-                const barcode = document.getElementById('scannerInput').value.trim();
+            async startCamera() {
+                try {
+                    this.updateCameraStatus('📹 Starting camera...', 'info');
+                    document.getElementById('startCameraBtn').disabled = true;
+
+                    const constraints = {
+                        video: {
+                            facingMode: 'environment',
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        }
+                    };
+
+                    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    this.videoElement.srcObject = stream;
+
+                    this.videoElement.onloadedmetadata = () => {
+                        this.videoElement.play();
+                        this.cameraActive = true;
+                        document.getElementById('startCameraBtn').style.display = 'none';
+                        document.getElementById('stopCameraBtn').style.display = 'flex';
+                        this.updateCameraStatus('📹 Camera Active - Ready to Scan', 'active');
+                        this.startScanning();
+                    };
+                } catch (error) {
+                    this.updateCameraStatus('❌ Camera Error: ' + error.message, 'error');
+                    this.showAlert('Camera access denied: ' + error.message, 'error');
+                    document.getElementById('startCameraBtn').disabled = false;
+                }
+            },
+
+            stopCamera() {
+                try {
+                    const stream = this.videoElement.srcObject;
+                    if (stream) {
+                        stream.getTracks().forEach(track => track.stop());
+                    }
+                    this.videoElement.srcObject = null;
+                    this.cameraActive = false;
+                    document.getElementById('startCameraBtn').style.display = 'flex';
+                    document.getElementById('stopCameraBtn').style.display = 'none';
+                    document.getElementById('startCameraBtn').disabled = false;
+                    this.updateCameraStatus('📹 Camera: Stopped', 'info');
+                } catch (error) {
+                    this.showAlert('Error stopping camera', 'error');
+                }
+            },
+
+            startScanning() {
+                if (!this.cameraActive) return;
+
+                this.codeReader.decodeFromVideoElement(this.videoElement, (result, err) => {
+                    if (result) {
+                        const scannedCode = result.getText();
+                        const currentTime = Date.now();
+
+                        if (scannedCode !== this.lastScannedCode || 
+                            currentTime - this.lastScanTime > this.scanDebounceTime) {
+                            this.lastScannedCode = scannedCode;
+                            this.lastScanTime = currentTime;
+                            this.processScan(scannedCode);
+                        }
+                    }
+
+                    if (this.cameraActive) {
+                        requestAnimationFrame(() => this.startScanning());
+                    }
+                });
+            },
+
+            processScan(barcode) {
+                document.getElementById('manualBarcodeInput').value = barcode;
+                this.addFromManualInput();
+            },
+
+            addFromManualInput() {
+                const barcode = document.getElementById('manualBarcodeInput').value.trim();
                 const manualName = document.getElementById('itemName').value.trim();
                 const manualPrice = parseFloat(document.getElementById('itemPrice').value) || 100;
                 const quantity = parseInt(document.getElementById('itemQuantity').value) || 1;
@@ -787,17 +988,15 @@
                 let itemName = manualName;
                 let itemPrice = manualPrice;
 
-                // Check if barcode exists in database
                 if (this.products[barcode]) {
                     itemName = this.products[barcode].name;
                     itemPrice = this.products[barcode].price;
                 }
 
-                // Check if item already exists in cart
                 const existingItem = this.cart.find(item => item.barcode === barcode);
                 if (existingItem) {
                     existingItem.quantity += quantity;
-                    this.showAlert(`Added ${quantity} more to ${itemName}`, 'success');
+                    this.showAlert(`✅ Added ${quantity} more to ${itemName}`, 'success');
                 } else {
                     this.cart.push({
                         barcode,
@@ -805,15 +1004,14 @@
                         price: itemPrice,
                         quantity
                     });
-                    this.showAlert(`Added ${itemName || 'Item'} to cart`, 'success');
+                    this.showAlert(`✅ Added ${itemName || 'Item'} to cart`, 'success');
                 }
 
-                // Clear inputs
-                document.getElementById('scannerInput').value = '';
+                document.getElementById('manualBarcodeInput').value = '';
                 document.getElementById('itemName').value = '';
                 document.getElementById('itemPrice').value = '100';
                 document.getElementById('itemQuantity').value = '1';
-                document.getElementById('scannerInput').focus();
+                document.getElementById('manualBarcodeInput').focus();
 
                 this.renderCart();
                 this.updateSummary();
@@ -846,7 +1044,7 @@
                     cartContainer.innerHTML = `
                         <div class="empty-cart">
                             <div class="empty-cart-icon">🛒</div>
-                            <p>Cart is empty. Scan or add items to get started.</p>
+                            <p>Cart is empty. Scan items to get started.</p>
                         </div>
                     `;
                     return;
@@ -895,7 +1093,6 @@
                     discountRow.style.display = 'none';
                 }
 
-                // Update receipt
                 this.updateReceipt(subtotal, discountAmount, total);
             },
 
@@ -914,15 +1111,14 @@
                     return;
                 }
 
-                // Determine if it's percentage or fixed amount
                 if (discountInput.includes('%')) {
                     this.discountType = 'percentage';
                     this.discountValue = value;
-                    this.showAlert(`${value}% discount applied`, 'success');
+                    this.showAlert(`✅ ${value}% discount applied`, 'success');
                 } else {
                     this.discountType = 'fixed';
                     this.discountValue = value;
-                    this.showAlert(`₹${value.toFixed(2)} discount applied`, 'success');
+                    this.showAlert(`✅ ₹${value.toFixed(2)} discount applied`, 'success');
                 }
 
                 document.getElementById('discountInput').value = '';
@@ -941,7 +1137,7 @@
                     this.discountType = null;
                     this.renderCart();
                     this.updateSummary();
-                    this.showAlert('Cart cleared', 'success');
+                    this.showAlert('✅ Cart cleared', 'success');
                 };
 
                 this.showConfirm('Are you sure you want to clear the entire cart?');
@@ -966,8 +1162,7 @@
                             body { font-family: 'Courier New', monospace; padding: 20px; margin: 0; }
                             .receipt-header { text-align: center; border-bottom: 2px dashed #000; padding-bottom: 15px; margin-bottom: 15px; }
                             .receipt-title { font-size: 16px; font-weight: bold; }
-                            .receipt-item { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-bottom: 8px; font-size: 12px; }
-                            .receipt-total { border-top: 2px dashed #000; border-bottom: 2px dashed #000; padding: 10px 0; margin: 10px 0; font-weight: bold; display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+                            .receipt-item { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
                             .receipt-footer { text-align: center; margin-top: 15px; font-size: 11px; color: #666; }
                         </style>
                     </head>
@@ -1003,13 +1198,35 @@
                     discountRow.style.display = 'none';
                 }
 
-                // Update date and time
                 const now = new Date();
                 const dateStr = now.toLocaleDateString('en-IN');
                 const timeStr = now.toLocaleTimeString('en-IN');
                 document.getElementById('receiptDate').textContent = dateStr;
                 document.getElementById('receiptTime').textContent = timeStr;
                 document.getElementById('receiptDateTime').textContent = `${dateStr} ${timeStr}`;
+            },
+
+            updateCameraStatus(message, type = 'info') {
+                const statusElement = document.getElementById('cameraStatus');
+                statusElement.textContent = message;
+                statusElement.className = `camera-status ${type === 'info' ? '' : type === 'active' ? 'active' : 'error'}`;
+            },
+
+            toggleFlash() {
+                if (!this.cameraActive) {
+                    this.showAlert('Start camera first', 'error');
+                    return;
+                }
+
+                const videoTrack = this.videoElement.srcObject.getVideoTracks();
+                if (videoTrack && videoTrack.getCapabilities().torch) {
+                    videoTrack.getSettings().torch 
+                        ? videoTrack.applyConstraints({ advanced: [{ torch: false }] })
+                        : videoTrack.applyConstraints({ advanced: [{ torch: true }] });
+                    this.showAlert('💡 Flash toggled', 'success');
+                } else {
+                    this.showAlert('Flash not available on this device', 'error');
+                }
             },
 
             showAlert(message, type = 'info') {
@@ -1051,15 +1268,19 @@
             }
         };
 
-        // Initialize app
         document.addEventListener('DOMContentLoaded', () => {
             app.init();
         });
 
-        // Close modal on outside click
         document.getElementById('confirmModal').addEventListener('click', (e) => {
             if (e.target.id === 'confirmModal') {
                 app.confirmAction(false);
+            }
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (app.cameraActive) {
+                app.stopCamera();
             }
         });
     </script>

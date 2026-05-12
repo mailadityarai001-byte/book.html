@@ -980,7 +980,7 @@
             html5QrcodeScanner.start(
                 { facingMode: 'environment' },
                 {
-                    fps: 3,
+                    fps: 6,
                     qrbox: { width: 250, height: 250 }
                 },
                 onScanSuccess,
@@ -1012,7 +1012,7 @@
 
         function onScanSuccess(decodedText) {
             const now = Date.now();
-            if (decodedText === lastScannedBarcode && now - lastScanTime < 2000) {
+            if (decodedText === lastScannedBarcode && now - lastScanTime < 1200) {
                 return;
             }
             lastScannedBarcode = decodedText;

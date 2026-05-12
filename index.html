@@ -21,6 +21,86 @@
             padding: 20px;
         }
 
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+        }
+
+        .menu-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 10px 15px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .menu-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            z-index: 100;
+            min-width: 200px;
+            overflow: hidden;
+        }
+
+        .dropdown-menu.active {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .dropdown-menu a {
+            display: block;
+            padding: 15px 20px;
+            color: #333;
+            text-decoration: none;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .dropdown-menu a:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-menu a:hover {
+            background: #f0f0f0;
+            color: #667eea;
+            padding-left: 25px;
+        }
+
         .container {
             max-width: 1400px;
             margin: 0 auto;
@@ -474,6 +554,14 @@
     </style>
 </head>
 <body>
+    <div class="header">
+        <h1>🛍️ POS System</h1>
+        <button class="menu-btn" id="menuBtn">⋮</button>
+        <div class="dropdown-menu" id="dropdownMenu">
+            <a onclick="goToInventory()">📦 Inventory & Data</a>
+        </div>
+    </div>
+
     <div class="container">
         <!-- Scanner Section -->
         <div class="scanner-section">
@@ -574,15 +662,25 @@
     </div>
 
     <script>
-        // Product Database
-        const productDatabase = {
-            '100100100': { name: 'AMUL BUTTER', price: 100 },
-            '200200200': { name: 'AMUL MILK 1L', price: 60 },
-            '300300300': { name: 'AMUL CHEESE', price: 150 },
-            '400400400': { name: 'AMUL GHEE', price: 500 },
-            '500500500': { name: 'AMUL CURD', price: 40 },
-            '8901234567890': { name: 'SAMPLE PRODUCT', price: 250 },
-        };
+        // Initialize localStorage with default products
+        function initializeStorage() {
+            if (!localStorage.getItem('productDatabase')) {
+                const defaultProducts = {
+                    '100100100': { name: 'AMUL BUTTER', price: 100 },
+                    '200200200': { name: 'AMUL MILK 1L', price: 60 },
+                    '300300300': { name: 'AMUL CHEESE', price: 150 },
+                    '400400400': { name: 'AMUL GHEE', price: 500 },
+                    '500500500': { name: 'AMUL CURD', price: 40 },
+                    '8901234567890': { name: 'SAMPLE PRODUCT', price: 250 },
+                };
+                localStorage.setItem('productDatabase', JSON.stringify(defaultProducts));
+            }
+        }
+
+        // Get products from localStorage
+        function getProductDatabase() {
+            return JSON.parse(localStorage.getItem('productDatabase')) || {};
+        }
 
         // State Management
         let cart = [];
@@ -591,6 +689,7 @@
         let isScanning = false;
         let lastScannedBarcode = '';
         let lastScanTime = 0;
+        let productDatabase = getProductDatabase();
 
         // DOM Elements
         const cartItemsContainer = document.getElementById('cartItems');
@@ -612,6 +711,23 @@
         const closeModal = document.getElementById('closeModal');
         const downloadPdfBtn = document.getElementById('downloadPdfBtn');
         const printReceiptBtn = document.getElementById('printReceiptBtn');
+        const menuBtn = document.getElementById('menuBtn');
+        const dropdownMenu = document.getElementById('dropdownMenu');
+
+        // Menu Toggle
+        menuBtn.addEventListener('click', () => {
+            dropdownMenu.classList.toggle('active');
+        });
+
+        window.addEventListener('click', (e) => {
+            if (e.target !== menuBtn && e.target !== dropdownMenu) {
+                dropdownMenu.classList.remove('active');
+            }
+        });
+
+        function goToInventory() {
+            window.location.href = 'inventory.html';
+        }
 
         // Initialize Scanner
         function initScanner() {
@@ -670,6 +786,7 @@
 
         // Add Product to Cart
         function addProductToCart(barcodeId) {
+            productDatabase = getProductDatabase();
             const product = productDatabase[barcodeId];
             
             if (!product) {
@@ -956,6 +1073,7 @@
         });
 
         // Initialize
+        initializeStorage();
         stopScannerBtn.disabled = true;
         updateTotals();
     </script>

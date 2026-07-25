@@ -3,10 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>POS System - Barcode & QR Scanner</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <title>Inventory Management & POS System</title>
     <style>
         * {
             margin: 0;
@@ -16,1547 +13,1600 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            background: white;
-            padding: 15px 20px;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-        }
-
-        .header h1 {
-            color: #333;
-            font-size: 28px;
-        }
-
-        .menu-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            padding: 10px 15px;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-        }
-
-        .menu-btn:hover {
-            transform: scale(1.1);
-        }
-
-        .dropdown-menu {
-            display: none;
-            position: absolute;
-            top: 80px;
-            right: 20px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            z-index: 100;
-            min-width: 200px;
+            background: #f5f5f5;
             overflow: hidden;
-        }
-
-        .dropdown-menu.active {
-            display: block;
-            animation: slideDown 0.3s ease;
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .dropdown-menu a {
-            display: block;
-            padding: 15px 20px;
-            color: #333;
-            text-decoration: none;
-            border-bottom: 1px solid #f0f0f0;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .dropdown-menu a:last-child {
-            border-bottom: none;
-        }
-
-        .dropdown-menu a:hover {
-            background: #f0f0f0;
-            color: #667eea;
-            padding-left: 25px;
-        }
-
-        .page {
-            display: none;
-        }
-
-        .page.active {
-            display: block;
         }
 
         .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            height: 90vh;
-        }
-
-        .scanner-section {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
             display: flex;
+            height: 100vh;
             flex-direction: column;
         }
 
-        .cart-section {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .cart-panel, .total-panel {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-        }
-
-        .cart-panel {
-            flex: 1;
-            overflow-y: auto;
-        }
-
-        h2 {
-            color: #333;
-            margin-bottom: 15px;
-            font-size: 24px;
-            border-bottom: 3px solid #667eea;
-            padding-bottom: 10px;
-        }
-
-        .scanner-controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .btn {
-            padding: 12px 20px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-        }
-
-        .btn-primary {
+        .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            flex: 1;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-secondary {
-            background: #f0f0f0;
-            color: #333;
-            flex: 1;
-        }
-
-        .btn-secondary:hover {
-            background: #e0e0e0;
-        }
-
-        .btn-danger {
-            background: #ff6b6b;
-            color: white;
-            padding: 8px 12px;
-            font-size: 12px;
-        }
-
-        .btn-danger:hover {
-            background: #ff5252;
-        }
-
-        .btn-success {
-            background: #51cf66;
-            color: white;
-        }
-
-        .btn-success:hover {
-            background: #40c057;
-        }
-
-        .btn-edit {
-            background: #4dabf7;
-            color: white;
-            padding: 8px 12px;
-            font-size: 12px;
-            margin-right: 5px;
-        }
-
-        .btn-edit:hover {
-            background: #339af0;
-        }
-
-        #scanner-container {
-            width: 100%;
-            height: 300px;
-            border: 2px dashed #667eea;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            background: #f9f9f9;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        #scanner-container video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        #inventoryScannerContainer {
-            width: 100%;
-            height: 300px;
-            border: 2px dashed #667eea;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            background: #f9f9f9;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        #inventoryScannerContainer video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .input-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .input-group input {
-            flex: 1;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s ease;
-        }
-
-        .input-group input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .cart-item {
-            background: #f9f9f9;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 12px;
-            border-left: 4px solid #667eea;
+            padding: 12px 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
-        .cart-item:hover {
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .item-details {
-            flex: 1;
-        }
-
-        .item-name {
+        .header h1 {
+            font-size: 18px;
             font-weight: 600;
-            color: #333;
-            font-size: 16px;
-            margin-bottom: 5px;
         }
 
-        .item-barcode {
+        .header-right {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
             font-size: 12px;
-            color: #999;
-            margin-bottom: 8px;
+            padding: 4px 8px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
         }
 
-        .item-price-qty {
-            display: flex;
-            gap: 15px;
-            font-size: 14px;
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4ade80;
+            animation: pulse 2s infinite;
         }
 
-        .item-price-qty span {
-            color: #667eea;
-            font-weight: 600;
+        .status-dot.disconnected {
+            background: #ef4444;
+            animation: none;
         }
 
-        .item-controls {
-            display: flex;
-            gap: 8px;
-            align-items: center;
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
 
-        .qty-control {
-            display: flex;
-            gap: 5px;
-            align-items: center;
-            background: white;
-            border-radius: 6px;
-            padding: 5px;
-        }
-
-        .qty-control button {
-            width: 28px;
-            height: 28px;
-            border: none;
-            background: #667eea;
+        .header button {
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
             color: white;
             border-radius: 4px;
             cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s ease;
+            font-size: 12px;
+            transition: all 0.3s;
         }
 
-        .qty-control button:hover {
+        .header button:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .header button.active {
+            background: #4ade80;
+            border-color: #22c55e;
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            gap: 10px;
+            padding: 10px;
+            flex-direction: row;
+        }
+
+        .pane {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .pane.active {
+            display: flex;
+        }
+
+        .pane-header {
+            background: #f8f9fa;
+            padding: 12px;
+            border-bottom: 1px solid #e9ecef;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .pane-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            .pane {
+                flex: 1;
+                min-height: 300px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+                gap: 5px;
+                padding: 5px;
+            }
+
+            .header {
+                padding: 8px;
+                gap: 5px;
+            }
+
+            .header h1 {
+                font-size: 14px;
+            }
+
+            .header button {
+                padding: 4px 8px;
+                font-size: 11px;
+            }
+
+            .pane {
+                min-height: 250px;
+            }
+        }
+
+        #camera-pane {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        #camera-container {
+            width: 100%;
+            height: 100%;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #camera-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .camera-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            max-width: 300px;
+            aspect-ratio: 1;
+            border: 2px solid #4ade80;
+            border-radius: 8px;
+            box-shadow: inset 0 0 20px rgba(74, 222, 128, 0.3);
+        }
+
+        .camera-controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .camera-controls button {
+            flex: 1;
+            padding: 8px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .camera-controls button:hover {
             background: #764ba2;
         }
 
-        .qty-control input {
-            width: 40px;
-            text-align: center;
+        .camera-controls button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        #product-pane {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 500;
+            font-size: 12px;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 10px;
+            background: #667eea;
+            color: white;
             border: none;
+            border-radius: 4px;
+            cursor: pointer;
             font-weight: 600;
-            font-size: 14px;
+            transition: all 0.3s;
+            font-size: 12px;
         }
 
-        .total-panel {
-            padding: 25px;
+        .btn-primary:hover {
+            background: #764ba2;
         }
 
-        .total-row {
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            padding: 6px 12px;
+            background: #e9ecef;
+            color: #333;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.3s;
+        }
+
+        .btn-secondary:hover {
+            background: #dee2e6;
+        }
+
+        #cart-pane {
+            flex: 1.2;
+            min-width: 300px;
+        }
+
+        .cart-items {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 12px;
+        }
+
+        .cart-item {
+            background: #f8f9fa;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            border-left: 3px solid #667eea;
             display: flex;
             justify-content: space-between;
-            margin-bottom: 15px;
-            font-size: 16px;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
         }
 
-        .total-row.subtotal {
-            color: #666;
-        }
-
-        .total-row.discount {
-            color: #ff6b6b;
-        }
-
-        .total-row.grand-total {
-            font-size: 24px;
-            font-weight: 700;
-            color: #51cf66;
-            border-top: 2px solid #e0e0e0;
-            border-bottom: 2px solid #e0e0e0;
-            padding: 15px 0;
-        }
-
-        .discount-section {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .discount-section input {
+        .cart-item-info {
             flex: 1;
-            padding: 10px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
+            min-width: 0;
         }
 
-        .discount-section button {
-            padding: 10px 15px;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-        }
-
-        .action-buttons button {
-            flex: 1;
-        }
-
-        .status-message {
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 15px;
+        .cart-item-name {
             font-weight: 600;
-            text-align: center;
-            display: none;
+            color: #333;
+            word-break: break-word;
         }
 
-        .status-message.success {
-            background: #d4edda;
-            color: #155724;
-            display: block;
+        .cart-item-details {
+            font-size: 11px;
+            color: #666;
+            margin-top: 2px;
         }
 
-        .status-message.error {
-            background: #f8d7da;
-            color: #721c24;
-            display: block;
+        .cart-item-controls {
+            display: flex;
+            gap: 4px;
+            align-items: center;
         }
 
-        .status-message.info {
-            background: #d1ecf1;
-            color: #0c5460;
-            display: block;
+        .qty-btn {
+            padding: 2px 6px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 10px;
         }
 
-        .empty-cart {
-            text-align: center;
-            color: #999;
-            padding: 40px 20px;
-            font-size: 16px;
+        .qty-btn:hover {
+            background: #764ba2;
+        }
+
+        .remove-btn {
+            padding: 2px 6px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 10px;
+        }
+
+        .remove-btn:hover {
+            background: #dc2626;
+        }
+
+        .billing-summary {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 4px;
+            border-top: 2px solid #667eea;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .summary-row.total {
+            font-weight: 700;
+            font-size: 14px;
+            color: #667eea;
+            border-top: 1px solid #ddd;
+            padding-top: 8px;
+        }
+
+        .discount-input {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 10px;
+        }
+
+        .discount-input input {
+            flex: 1;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .discount-input button {
+            padding: 6px 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        .payment-modes {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .payment-btn {
+            padding: 8px;
+            background: #f0f0f0;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .payment-btn:hover {
+            border-color: #667eea;
+            background: #f8f9fa;
+        }
+
+        .payment-btn.selected {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .inventory-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+
+        .inventory-table th {
+            background: #f8f9fa;
+            padding: 8px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #ddd;
+            color: #333;
+        }
+
+        .inventory-table td {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .inventory-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .inventory-table .edit-btn,
+        .inventory-table .delete-btn {
+            padding: 3px 6px;
+            margin-right: 4px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 10px;
+        }
+
+        .inventory-table .edit-btn {
+            background: #667eea;
+            color: white;
+        }
+
+        .inventory-table .delete-btn {
+            background: #ef4444;
+            color: white;
         }
 
         .modal {
             display: none;
             position: fixed;
-            z-index: 1000;
-            left: 0;
             top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            animation: fadeIn 0.3s ease;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+        .modal.active {
+            display: flex;
         }
 
         .modal-content {
-            background-color: white;
-            margin: 10% auto;
-            padding: 30px;
-            border-radius: 15px;
-            width: 90%;
-            max-width: 500px;
-            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.3);
-            animation: slideIn 0.3s ease;
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateY(-50px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .close:hover {
-            color: #000;
-        }
-
-        .receipt {
-            font-family: 'Courier New', monospace;
+            background: white;
             padding: 20px;
-            max-width: 400px;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
         }
 
-        .receipt-header {
-            text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 2px dashed #000;
-            padding-bottom: 15px;
-        }
-
-        .receipt-title {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .receipt-items {
-            margin-bottom: 20px;
-            border-bottom: 2px dashed #000;
-            padding-bottom: 15px;
-        }
-
-        .receipt-item {
+        .modal-header {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 16px;
             display: flex;
             justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 12px;
+            align-items: center;
         }
 
-        .receipt-totals {
-            margin-bottom: 20px;
-        }
-
-        .receipt-total-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 12px;
-        }
-
-        .receipt-grand-total {
-            font-size: 14px;
-            font-weight: bold;
-            border-top: 1px dashed #000;
-            border-bottom: 1px dashed #000;
-            padding: 8px 0;
-        }
-
-        .receipt-footer {
-            text-align: center;
-            font-size: 11px;
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
             color: #666;
         }
 
-        .inventory-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        .inventory-left {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .inventory-right {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-        }
-
-        .add-product-section {
-            background: #f9f9f9;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 30px;
-            border: 2px solid #e0e0e0;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 600;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s ease;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 15px;
-        }
-
-        .table-container {
-            overflow-x: auto;
-            flex: 1;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        thead {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            position: sticky;
-            top: 0;
-        }
-
-        th {
-            padding: 15px;
-            text-align: left;
-            font-weight: 600;
-        }
-
-        td {
-            padding: 15px;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        tbody tr:hover {
-            background: #f9f9f9;
-        }
-
-        .empty-message {
+        .setup-container {
             text-align: center;
-            color: #999;
-            padding: 40px;
-            font-size: 16px;
         }
 
-        .modal-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
+        .setup-container h2 {
+            margin-bottom: 16px;
+            color: #333;
         }
 
-        .modal-buttons button {
-            flex: 1;
+        .setup-container p {
+            margin-bottom: 12px;
+            color: #666;
+            font-size: 14px;
         }
 
-        .scanner-controls-inventory {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
+        .setup-container input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
         }
 
-        @media (max-width: 1024px) {
-            .container {
-                grid-template-columns: 1fr;
-                height: auto;
-            }
+        .alert {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            display: none;
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2000;
+            max-width: 90%;
+        }
 
-            .inventory-container {
-                grid-template-columns: 1fr;
-            }
+        .alert.active {
+            display: block;
+        }
+
+        .alert.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .alert.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .alert.info {
+            background: #dbeafe;
+            color: #1e3a8a;
+            border: 1px solid #bfdbfe;
         }
 
         @media print {
-            body {
-                background: white;
+            body * {
+                visibility: hidden;
             }
-            .container, .scanner-section, .cart-section, .btn, .action-buttons {
-                display: none !important;
+
+            .print-invoice,
+            .print-invoice * {
+                visibility: visible;
             }
-            #receiptModal {
-                position: static;
-                display: block !important;
-                background: white;
-            }
-            .modal-content {
-                margin: 0;
-                box-shadow: none;
+
+            .print-invoice {
+                position: absolute;
+                left: 0;
+                top: 0;
                 width: 100%;
-            }
-            .receipt {
-                width: 100%;
-                max-width: 100%;
             }
         }
 
-        @media (max-width: 768px) {
-            .form-row {
-                grid-template-columns: 1fr;
-            }
+        .print-invoice {
+            display: none;
+            width: 80mm;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
 
-            table {
-                font-size: 12px;
-            }
+        .print-invoice.active {
+            display: block;
+        }
 
-            th, td {
-                padding: 10px;
-            }
+        .invoice-header {
+            text-align: center;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #000;
+            padding-bottom: 10px;
+        }
 
-            .inventory-container {
-                grid-template-columns: 1fr;
-            }
+        .invoice-items {
+            margin-bottom: 10px;
+            border-bottom: 1px solid #000;
+            padding-bottom: 10px;
+        }
+
+        .invoice-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .invoice-summary {
+            margin-bottom: 10px;
+            border-bottom: 1px solid #000;
+            padding-bottom: 10px;
+        }
+
+        .invoice-summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+        }
+
+        .invoice-footer {
+            text-align: center;
+            font-size: 10px;
+            color: #666;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 6px 12px;
+            background: #e9ecef;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: currentColor;
+            border-radius: 50%;
+            animation: blink 1.4s infinite;
+        }
+
+        @keyframes blink {
+            0%, 80%, 100% { opacity: 0.3; }
+            40% { opacity: 1; }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1 id="pageTitle">🛍️ POS System</h1>
-        <button class="menu-btn" id="menuBtn">⋮</button>
-        <div class="dropdown-menu" id="dropdownMenu">
-            <a onclick="switchPage('pos')">🛒 POS System</a>
-            <a onclick="switchPage('inventory')">📦 Inventory & Data</a>
-        </div>
-    </div>
-
-    <!-- POS PAGE -->
-    <div id="posPage" class="page active">
-        <div class="container">
-            <!-- Scanner Section -->
-            <div class="scanner-section">
-                <h2>📱 Scanner</h2>
-                <div class="status-message" id="statusMessage"></div>
-                
-                <div class="scanner-controls">
-                    <button class="btn btn-primary" id="startScannerBtn">Start Camera</button>
-                    <button class="btn btn-secondary" id="stopScannerBtn">Stop Camera</button>
+    <div class="container">
+        <div class="header">
+            <h1>📦 Inventory & POS System</h1>
+            <div class="header-right">
+                <div class="status-indicator">
+                    <div class="status-dot" id="syncStatus"></div>
+                    <span id="syncText">Initializing...</span>
                 </div>
-
-                <div id="scanner-container"></div>
-
-                <div class="input-group">
-                    <input 
-                        type="text" 
-                        id="barcodeInput" 
-                        placeholder="Or manually enter barcode/QR code here..."
-                        autocomplete="off"
-                    >
-                </div>
-
-                <div class="input-group">
-                    <input 
-                        type="text" 
-                        id="productNameInput" 
-                        placeholder="Product Name (for manual entry)"
-                        autocomplete="off"
-                    >
-                    <input 
-                        type="number" 
-                        id="productPriceInput" 
-                        placeholder="Price"
-                        step="0.01"
-                        autocomplete="off"
-                    >
-                </div>
-
-                <button class="btn btn-success" id="addManualProductBtn">Add Manual Product</button>
+                <button onclick="showSetupModal()">⚙️ Setup</button>
+                <button id="modeToggle" onclick="toggleMode()">📱 Billing Mode</button>
             </div>
+        </div>
 
-            <!-- Cart Section -->
-            <div class="cart-section">
-                <div class="cart-panel">
-                    <h2>🛒 Cart</h2>
-                    <div id="cartItems" class="empty-cart">Cart is empty. Start scanning!</div>
-                </div>
-
-                <!-- Total Section -->
-                <div class="total-panel">
-                    <h2>💰 Billing</h2>
-                    
-                    <div class="total-row subtotal">
-                        <span>Subtotal:</span>
-                        <span id="subtotalAmount">₹0.00</span>
+        <div class="main-content">
+            <div id="camera-pane" class="pane active">
+                <div class="pane-header">📷 Scanner</div>
+                <div class="pane-content">
+                    <div id="camera-container" style="display: none;">
+                        <video id="camera-video" playsinline></video>
+                        <div class="camera-overlay"></div>
                     </div>
-
-                    <div class="discount-section">
-                        <input 
-                            type="number" 
-                            id="discountInput" 
-                            placeholder="Discount %" 
-                            min="0" 
-                            max="100"
-                            step="0.01"
-                        >
-                        <button class="btn btn-secondary" id="applyDiscountBtn">Apply</button>
+                    <div id="camera-placeholder" style="text-align: center; padding: 20px; color: #999;">
+                        <p>Camera will appear here when enabled</p>
                     </div>
-
-                    <div class="total-row discount" id="discountRow" style="display: none;">
-                        <span>Discount:</span>
-                        <span id="discountAmount">₹0.00</span>
-                    </div>
-
-                    <div class="total-row grand-total">
-                        <span>Total:</span>
-                        <span id="grandTotalAmount">₹0.00</span>
-                    </div>
-
-                    <div class="action-buttons">
-                        <button class="btn btn-danger" id="clearCartBtn">Clear Cart</button>
-                        <button class="btn btn-success" id="printBtn">Print Receipt</button>
+                    <div class="camera-controls">
+                        <button id="toggleCameraBtn" onclick="toggleCamera()">🎥 Enable Camera</button>
+                        <button id="manualScanBtn" onclick="showManualScanModal()">⌨️ Manual Entry</button>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- INVENTORY PAGE -->
-    <div id="inventoryPage" class="page">
-        <div class="inventory-container">
-            <!-- Left Section: Scanner & Manual Entry -->
-            <div class="inventory-left">
-                <h2>📱 Scanner / Manual Entry</h2>
-                <div class="status-message" id="inventoryStatusMessage"></div>
+            <div id="product-pane" class="pane active">
+                <div class="pane-header">📝 Product Details</div>
+                <div class="pane-content">
+                    <div class="tab-buttons">
+                        <button class="tab-btn active" onclick="switchProductTab('add')">Add Product</button>
+                        <button class="tab-btn" onclick="switchProductTab('inventory')">Inventory</button>
+                    </div>
 
-                <div class="scanner-controls-inventory">
-                    <button class="btn btn-primary" id="startInventoryScannerBtn">Start Camera</button>
-                    <button class="btn btn-secondary" id="stopInventoryScannerBtn">Stop Camera</button>
-                </div>
-
-                <div id="inventoryScannerContainer"></div>
-
-                <div class="add-product-section">
-                    <div class="form-row">
+                    <div id="add-product-tab" class="tab-content active">
                         <div class="form-group">
-                            <label>Barcode / QR Code ID</label>
-                            <input type="text" id="invBarcodeInput" placeholder="e.g., 100100100" autocomplete="off">
+                            <label>QR/Barcode ID</label>
+                            <input type="text" id="productCode" placeholder="Scan or enter code">
                         </div>
                         <div class="form-group">
                             <label>Product Name</label>
-                            <input type="text" id="invProductNameInput" placeholder="e.g., AMUL BUTTER" autocomplete="off">
+                            <input type="text" id="productName" placeholder="Enter product name">
                         </div>
                         <div class="form-group">
                             <label>Price (₹)</label>
-                            <input type="number" id="invPriceInput" placeholder="e.g., 100" step="0.01" autocomplete="off">
+                            <input type="number" id="productPrice" placeholder="0.00" step="0.01" min="0">
                         </div>
+                        <div class="form-group">
+                            <label>Expiry Date</label>
+                            <input type="date" id="productExpiry">
+                        </div>
+                        <div class="form-group">
+                            <label>Quantity</label>
+                            <input type="number" id="productQty" placeholder="0" step="1" min="0" value="1">
+                        </div>
+                        <button class="btn-primary" onclick="addProduct()">➕ Add to Inventory</button>
                     </div>
-                    <button class="btn btn-success" id="addProductBtn" style="margin-top: 15px;">Add Product</button>
+
+                    <div id="inventory-tab" class="tab-content">
+                        <div id="inventoryList"></div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Right Section: Product Table -->
-            <div class="inventory-right">
-                <h2>📦 Product Inventory</h2>
-                <div class="table-container">
-                    <table id="productsTable">
-                        <thead>
-                            <tr>
-                                <th>Barcode / QR ID</th>
-                                <th>Product Name</th>
-                                <th>Price (₹)</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tableBody">
-                            <tr>
-                                <td colspan="4" class="empty-message">No products added yet. Add one above!</td>
-                            </tr>
-                        </tbody>
-                    </table>
+            <div id="cart-pane" class="pane active">
+                <div class="pane-header">🛒 Billing Cart</div>
+                <div class="pane-content">
+                    <div class="cart-items" id="cartItems"></div>
+
+                    <div class="billing-summary">
+                        <div class="discount-input">
+                            <input type="number" id="discountPercent" placeholder="Discount %" min="0" max="100" step="0.01" value="0">
+                            <button onclick="applyDiscount()">Apply</button>
+                        </div>
+
+                        <div class="summary-row">
+                            <span>Subtotal:</span>
+                            <span id="subtotal">₹0.00</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Discount:</span>
+                            <span id="discountAmount">₹0.00</span>
+                        </div>
+                        <div class="summary-row total">
+                            <span>Total:</span>
+                            <span id="totalAmount">₹0.00</span>
+                        </div>
+
+                        <div class="payment-modes">
+                            <button class="payment-btn" onclick="selectPayment('cash')">💵 Cash</button>
+                            <button class="payment-btn" onclick="selectPayment('upi')">📱 UPI</button>
+                            <button class="payment-btn" onclick="selectPayment('netbanking')">🏦 Net Banking</button>
+                            <button class="payment-btn" onclick="selectPayment('card')">💳 Card</button>
+                        </div>
+
+                        <button class="btn-primary" style="margin-top: 12px;" onclick="proceedPayment()">✅ Proceed to Payment</button>
+                        <button class="btn-secondary" style="width: 100%; margin-top: 8px;" onclick="clearCart()">🗑️ Clear Cart</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Receipt Modal -->
-    <div id="receiptModal" class="modal">
+    <div id="setupModal" class="modal">
         <div class="modal-content">
-            <span class="close" id="closeModal">&times;</span>
-            <div id="receiptContent" class="receipt"></div>
-            <div style="margin-top: 20px; display: flex; gap: 10px;">
-                <button class="btn btn-primary" style="flex: 1;" id="downloadPdfBtn">Download PDF</button>
-                <button class="btn btn-secondary" style="flex: 1;" id="printReceiptBtn">Print</button>
+            <div class="modal-header">
+                <span>Setup GitHub Gist Sync</span>
+                <button class="modal-close" onclick="closeModal('setupModal')">×</button>
+            </div>
+            <div class="setup-container">
+                <p>Enter your GitHub Personal Access Token to enable cross-device synchronization</p>
+                <input type="password" id="githubToken" placeholder="github_pat_xxxxx">
+                <p style="font-size: 12px; color: #999;">
+                    Create a token at: github.com/settings/tokens (needs gist scope)
+                </p>
+                <button class="btn-primary" onclick="setupGithubToken()">Connect</button>
             </div>
         </div>
     </div>
 
-    <!-- Edit Modal -->
-    <div id="editModal" class="modal">
+    <div id="manualScanModal" class="modal">
         <div class="modal-content">
-            <span class="close" id="closeEditModal">&times;</span>
-            <h2>Edit Product</h2>
+            <div class="modal-header">
+                <span>Manual Barcode Entry</span>
+                <button class="modal-close" onclick="closeModal('manualScanModal')">×</button>
+            </div>
             <div class="form-group">
-                <label>Barcode / QR Code ID</label>
-                <input type="text" id="editBarcodeInput" readonly>
+                <label>QR/Barcode ID</label>
+                <input type="text" id="manualScanCode" placeholder="Enter barcode/QR code" autofocus>
+            </div>
+            <button class="btn-primary" onclick="processManualScan()">Search</button>
+        </div>
+    </div>
+
+    <div id="editProductModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>Edit Product</span>
+                <button class="modal-close" onclick="closeModal('editProductModal')">×</button>
             </div>
             <div class="form-group">
                 <label>Product Name</label>
-                <input type="text" id="editProductNameInput">
+                <input type="text" id="editProductName">
             </div>
             <div class="form-group">
                 <label>Price (₹)</label>
-                <input type="number" id="editPriceInput" step="0.01">
+                <input type="number" id="editProductPrice" step="0.01" min="0">
             </div>
-            <div class="modal-buttons">
-                <button class="btn btn-primary" id="saveEditBtn">Save Changes</button>
-                <button class="btn btn-secondary" id="cancelEditBtn">Cancel</button>
+            <div class="form-group">
+                <label>Expiry Date</label>
+                <input type="date" id="editProductExpiry">
             </div>
+            <div class="form-group">
+                <label>Quantity</label>
+                <input type="number" id="editProductQty" step="1" min="0">
+            </div>
+            <button class="btn-primary" onclick="saveEditProduct()">Save Changes</button>
         </div>
     </div>
 
+    <div id="printModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>Invoice Preview</span>
+                <button class="modal-close" onclick="closeModal('printModal')">×</button>
+            </div>
+            <div id="printPreview"></div>
+            <button class="btn-primary" onclick="printInvoice()" style="margin-top: 12px;">🖨️ Print</button>
+            <button class="btn-secondary" style="width: 100%; margin-top: 8px;" onclick="closeModal('printModal')">Close</button>
+        </div>
+    </div>
+
+    <div id="alert" class="alert"></div>
+    <div id="printInvoiceTemplate" class="print-invoice"></div>
+
     <script>
-        // ============ INITIALIZATION ============
-        function initializeStorage() {
-            if (!localStorage.getItem('productDatabase')) {
-                const defaultProducts = {
-                    '100100100': { name: 'AMUL BUTTER', price: 100 },
-                    '200200200': { name: 'AMUL MILK 1L', price: 60 },
-                    '300300300': { name: 'AMUL CHEESE', price: 150 },
-                    '400400400': { name: 'AMUL GHEE', price: 500 },
-                    '500500500': { name: 'AMUL CURD', price: 40 },
-                    '8901234567890': { name: 'SAMPLE PRODUCT', price: 250 },
+        const APP = {
+            inventory: [],
+            cart: [],
+            selectedPayment: null,
+            cameraActive: false,
+            lastScanTime: 0,
+            scanDelay: 2000,
+            currentMode: 'billing',
+            editingProductCode: null,
+            githubToken: localStorage.getItem('githubToken') || null,
+            gistId: localStorage.getItem('gistId') || null,
+            syncInterval: null,
+            discountPercent: 0
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadInventory();
+            updateCartDisplay();
+            checkSetup();
+            initializeSyncInterval();
+        });
+
+        function checkSetup() {
+            if (!APP.githubToken) {
+                showSetupModal();
+                updateSyncStatus('disconnected');
+            } else {
+                updateSyncStatus('connected');
+                syncInventory();
+            }
+        }
+
+        function initializeSyncInterval() {
+            APP.syncInterval = setInterval(() => {
+                if (APP.githubToken) {
+                    syncInventory();
+                }
+            }, 5000);
+        }
+
+        async function setupGithubToken() {
+            const token = document.getElementById('githubToken').value.trim();
+            if (!token) {
+                showAlert('Please enter a GitHub token', 'error');
+                return;
+            }
+
+            try {
+                updateSyncStatus('syncing');
+                APP.githubToken = token;
+                localStorage.setItem('githubToken', token);
+
+                await initializeGist();
+                await syncInventory();
+
+                closeModal('setupModal');
+                showAlert('GitHub connection successful!', 'success');
+                updateSyncStatus('connected');
+            } catch (error) {
+                showAlert('Failed to connect: ' + error.message, 'error');
+                updateSyncStatus('disconnected');
+                APP.githubToken = null;
+                localStorage.removeItem('githubToken');
+            }
+        }
+
+        async function initializeGist() {
+            const headers = {
+                'Authorization': `token ${APP.githubToken}`,
+                'Accept': 'application/vnd.github.v3+json'
+            };
+
+            try {
+                if (APP.gistId) {
+                    const response = await fetch(`https://api.github.com/gists/${APP.gistId}`, { headers });
+                    if (response.ok) {
+                        return;
+                    }
+                }
+
+                const response = await fetch('https://api.github.com/gists', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({
+                        public: false,
+                        files: {
+                            'inventory.json': {
+                                content: JSON.stringify({ inventory: [], version: 1 })
+                            }
+                        }
+                    })
+                });
+
+                if (!response.ok) throw new Error('Failed to create gist');
+                const data = await response.json();
+                APP.gistId = data.id;
+                localStorage.setItem('gistId', APP.gistId);
+            } catch (error) {
+                console.error('Gist init error:', error);
+                throw error;
+            }
+        }
+
+        async function syncInventory() {
+            if (!APP.githubToken || !APP.gistId) return;
+
+            try {
+                const headers = {
+                    'Authorization': `token ${APP.githubToken}`,
+                    'Accept': 'application/vnd.github.v3+json'
                 };
-                localStorage.setItem('productDatabase', JSON.stringify(defaultProducts));
+
+                const response = await fetch(`https://api.github.com/gists/${APP.gistId}`, { headers });
+                if (!response.ok) throw new Error('Failed to fetch gist');
+                
+                const gistData = await response.json();
+                const fileContent = gistData.files['inventory.json'].content;
+                const remoteData = JSON.parse(fileContent);
+
+                if (remoteData.inventory && remoteData.inventory.length > 0) {
+                    APP.inventory = remoteData.inventory;
+                    updateInventoryDisplay();
+                    updateCartDisplay();
+                }
+
+                await pushInventoryToGist();
+            } catch (error) {
+                console.error('Sync error:', error);
+                updateSyncStatus('disconnected');
             }
         }
 
-        function getProductDatabase() {
-            return JSON.parse(localStorage.getItem('productDatabase')) || {};
-        }
+                async function pushInventoryToGist() {
+            if (!APP.githubToken || !APP.gistId) return;
 
-        function saveProductDatabase(db) {
-            localStorage.setItem('productDatabase', JSON.stringify(db));
-        }
+            try {
+                const headers = {
+                    'Authorization': `token ${APP.githubToken}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                };
 
-        // ============ PAGE SWITCHING ============
-        function switchPage(page) {
-            document.getElementById('posPage').classList.remove('active');
-            document.getElementById('inventoryPage').classList.remove('active');
-            document.getElementById('dropdownMenu').classList.remove('active');
+                const response = await fetch(`https://api.github.com/gists/${APP.gistId}`, {
+                    method: 'PATCH',
+                    headers,
+                    body: JSON.stringify({
+                        files: {
+                            'inventory.json': {
+                                content: JSON.stringify({
+                                    inventory: APP.inventory,
+                                    lastUpdated: new Date().toISOString(),
+                                    version: 1
+                                })
+                            }
+                        }
+                    })
+                });
 
-            if (page === 'pos') {
-                document.getElementById('posPage').classList.add('active');
-                document.getElementById('pageTitle').textContent = '🛍️ POS System';
-            } else if (page === 'inventory') {
-                document.getElementById('inventoryPage').classList.add('active');
-                document.getElementById('pageTitle').textContent = '📦 Inventory & Data Management';
-                renderTable();
+                if (!response.ok) throw new Error('Failed to push to gist');
+                updateSyncStatus('connected');
+            } catch (error) {
+                console.error('Push error:', error);
+                updateSyncStatus('disconnected');
             }
         }
 
-        // ============ POS PAGE VARIABLES ============
-        let cart = [];
+        function updateSyncStatus(status) {
+            const dot = document.getElementById('syncStatus');
+            const text = document.getElementById('syncText');
+            
+            if (status === 'connected') {
+                dot.className = 'status-dot';
+                text.textContent = 'Synced';
+            } else if (status === 'syncing') {
+                dot.className = 'status-dot';
+                text.textContent = 'Syncing...';
+            } else {
+                dot.className = 'status-dot disconnected';
+                text.textContent = 'Offline';
+            }
+        }
+
+        // ============================================
+        // CAMERA & SCANNING
+        // ============================================
         let scanner = null;
-        let discount = 0;
-        let isScanning = false;
-        let lastScannedBarcode = '';
-        let lastScanTime = 0;
-        let productDatabase = getProductDatabase();
 
-        // ============ INVENTORY PAGE VARIABLES ============
-        let inventoryScanner = null;
-        let isInventoryScanning = false;
-        let lastInventoryScannedBarcode = '';
-        let lastInventoryScanTime = 0;
-
-        // ============ POS PAGE DOM ELEMENTS ============
-        const menuBtn = document.getElementById('menuBtn');
-        const dropdownMenu = document.getElementById('dropdownMenu');
-        const cartItemsContainer = document.getElementById('cartItems');
-        const startScannerBtn = document.getElementById('startScannerBtn');
-        const stopScannerBtn = document.getElementById('stopScannerBtn');
-        const barcodeInput = document.getElementById('barcodeInput');
-        const productNameInput = document.getElementById('productNameInput');
-        const productPriceInput = document.getElementById('productPriceInput');
-        const addManualProductBtn = document.getElementById('addManualProductBtn');
-        const subtotalAmountEl = document.getElementById('subtotalAmount');
-        const discountAmountEl = document.getElementById('discountAmount');
-        const grandTotalAmountEl = document.getElementById('grandTotalAmount');
-        const discountInputEl = document.getElementById('discountInput');
-        const applyDiscountBtn = document.getElementById('applyDiscountBtn');
-        const clearCartBtn = document.getElementById('clearCartBtn');
-        const printBtn = document.getElementById('printBtn');
-        const statusMessage = document.getElementById('statusMessage');
-        const receiptModal = document.getElementById('receiptModal');
-        const closeModal = document.getElementById('closeModal');
-        const downloadPdfBtn = document.getElementById('downloadPdfBtn');
-        const printReceiptBtn = document.getElementById('printReceiptBtn');
-
-        // ============ INVENTORY PAGE DOM ELEMENTS ============
-        const startInventoryScannerBtn = document.getElementById('startInventoryScannerBtn');
-        const stopInventoryScannerBtn = document.getElementById('stopInventoryScannerBtn');
-        const invBarcodeInput = document.getElementById('invBarcodeInput');
-        const invProductNameInput = document.getElementById('invProductNameInput');
-        const invPriceInput = document.getElementById('invPriceInput');
-        const addProductBtn = document.getElementById('addProductBtn');
-        const tableBody = document.getElementById('tableBody');
-        const inventoryStatusMessage = document.getElementById('inventoryStatusMessage');
-        const closeEditModal = document.getElementById('closeEditModal');
-        const editBarcodeInput = document.getElementById('editBarcodeInput');
-        const editProductNameInput = document.getElementById('editProductNameInput');
-        const editPriceInput = document.getElementById('editPriceInput');
-        const saveEditBtn = document.getElementById('saveEditBtn');
-        const cancelEditBtn = document.getElementById('cancelEditBtn');
-        const editModal = document.getElementById('editModal');
-
-        let editingBarcode = null;
-
-        // ============ MENU TOGGLE ============
-        menuBtn.addEventListener('click', () => {
-            dropdownMenu.classList.toggle('active');
-        });
-
-        window.addEventListener('click', (e) => {
-            if (e.target !== menuBtn && e.target !== dropdownMenu) {
-                dropdownMenu.classList.remove('active');
+        async function toggleCamera() {
+            const btn = document.getElementById('toggleCameraBtn');
+            
+            if (APP.cameraActive) {
+                stopCamera();
+                btn.textContent = '🎥 Enable Camera';
+                btn.style.background = '#667eea';
+            } else {
+                btn.textContent = '⏹️ Stop Camera';
+                btn.style.background = '#ef4444';
+                await startCamera();
             }
-        });
-
-        // ============ POS PAGE FUNCTIONS ============
-        function showStatus(message, type) {
-            statusMessage.textContent = message;
-            statusMessage.className = `status-message ${type}`;
-            setTimeout(() => {
-                statusMessage.className = 'status-message';
-            }, 4000);
         }
 
-        function initScanner() {
-            if (isScanning) return;
-            
-            const html5QrcodeScanner = new Html5Qrcode('scanner-container');
-            
-            html5QrcodeScanner.start(
-                { facingMode: 'environment' },
-                {
-                    fps: 6,
-                    qrbox: { width: 250, height: 250 }
-                },
-                onScanSuccess,
-                onScanError
-            ).then(() => {
-                isScanning = true;
-                scanner = html5QrcodeScanner;
-                showStatus('Camera started successfully!', 'success');
-                startScannerBtn.disabled = true;
-                stopScannerBtn.disabled = false;
-            }).catch(() => {
-                showStatus('Error accessing camera. Please check permissions.', 'error');
+        async function startCamera() {
+            try {
+                const container = document.getElementById('camera-container');
+                const placeholder = document.getElementById('camera-placeholder');
+                const video = document.getElementById('camera-video');
+
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                });
+
+                video.srcObject = stream;
+                container.style.display = 'block';
+                placeholder.style.display = 'none';
+                APP.cameraActive = true;
+
+                if (!window.jsQR) {
+                    await loadQRLibrary();
+                }
+
+                scanQRCode(video);
+            } catch (error) {
+                showAlert('Camera access denied: ' + error.message, 'error');
+                document.getElementById('toggleCameraBtn').textContent = '🎥 Enable Camera';
+            }
+        }
+
+        function stopCamera() {
+            const video = document.getElementById('camera-video');
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+            document.getElementById('camera-container').style.display = 'none';
+            document.getElementById('camera-placeholder').style.display = 'block';
+            APP.cameraActive = false;
+        }
+
+        async function loadQRLibrary() {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
             });
         }
 
-        function stopScanner() {
-            if (scanner && isScanning) {
-                scanner.stop().then(() => {
-                    isScanning = false;
-                    scanner = null;
-                    showStatus('Camera stopped', 'info');
-                    startScannerBtn.disabled = false;
-                    stopScannerBtn.disabled = true;
-                }).catch(() => {
-                    showStatus('Error stopping camera', 'error');
-                });
-            }
-        }
+        function scanQRCode(video) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
 
-        function onScanSuccess(decodedText) {
-            const now = Date.now();
-            if (decodedText === lastScannedBarcode && now - lastScanTime < 1200) {
-                return;
-            }
-            lastScannedBarcode = decodedText;
-            lastScanTime = now;
-            
-            addProductToCart(decodedText);
-            barcodeInput.value = decodedText;
-        }
+            function scan() {
+                if (!APP.cameraActive) return;
 
-        function onScanError(error) {
-            // Silently ignore scan errors
-        }
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        function addProductToCart(barcodeId) {
-            productDatabase = getProductDatabase();
-            const product = productDatabase[barcodeId];
-            
-            if (!product) {
-                showStatus(`Product not found for barcode: ${barcodeId}`, 'error');
-                return;
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = window.jsQR(imageData.data, imageData.width, imageData.height);
+
+                if (code) {
+                    const now = Date.now();
+                    if (now - APP.lastScanTime > APP.scanDelay) {
+                        APP.lastScanTime = now;
+                        processScan(code.data);
+                    }
+                }
+
+                requestAnimationFrame(scan);
             }
 
-            const existingItem = cart.find(item => item.barcode === barcodeId);
-            
-            if (existingItem) {
-                existingItem.quantity++;
+            scan();
+        }
+
+        function processScan(scannedCode) {
+            const product = APP.inventory.find(p => p.code === scannedCode);
+
+            if (product) {
+                const cartItem = APP.cart.find(item => item.code === scannedCode);
+                if (cartItem) {
+                    cartItem.quantity++;
+                } else {
+                    APP.cart.push({
+                        code: scannedCode,
+                        name: product.name,
+                        price: product.price,
+                        quantity: 1
+                    });
+                }
+                updateCartDisplay();
+                showAlert(`✅ ${product.name} added to cart`, 'success');
             } else {
-                cart.push({
-                    barcode: barcodeId,
-                    name: product.name,
-                    price: product.price,
-                    quantity: 1
-                });
+                showAlert(`❌ Product not found: ${scannedCode}`, 'error');
+                document.getElementById('productCode').value = scannedCode;
+                document.getElementById('productName').focus();
             }
-
-            showStatus(`${product.name} added to cart!`, 'success');
-            renderCart();
-            updateTotals();
         }
 
-        function renderCart() {
-            if (cart.length === 0) {
-                cartItemsContainer.innerHTML = '<div class="empty-cart">Cart is empty. Start scanning!</div>';
+        function showManualScanModal() {
+            document.getElementById('manualScanModal').classList.add('active');
+            document.getElementById('manualScanCode').focus();
+        }
+
+        function processManualScan() {
+            const code = document.getElementById('manualScanCode').value.trim();
+            if (!code) {
+                showAlert('Please enter a barcode', 'error');
                 return;
             }
 
-            cartItemsContainer.innerHTML = cart.map((item, index) => `
-                <div class="cart-item">
-                    <div class="item-details">
-                        <div class="item-name">${item.name}</div>
-                        <div class="item-barcode">ID: ${item.barcode}</div>
-                        <div class="item-price-qty">
-                            <span>₹${item.price.toFixed(2)}</span>
-                            <span>× ${item.quantity}</span>
-                            <span style="color: #51cf66;">= ₹${(item.price * item.quantity).toFixed(2)}</span>
+            processScan(code);
+            closeModal('manualScanModal');
+            document.getElementById('manualScanCode').value = '';
+        }
+
+        // ============================================
+        // INVENTORY MANAGEMENT
+        // ============================================
+        function addProduct() {
+            const code = document.getElementById('productCode').value.trim();
+            const name = document.getElementById('productName').value.trim();
+            const price = parseFloat(document.getElementById('productPrice').value);
+            const expiry = document.getElementById('productExpiry').value;
+            const qty = parseInt(document.getElementById('productQty').value);
+
+            if (!code || !name || !price || !qty) {
+                showAlert('Please fill all fields', 'error');
+                return;
+            }
+
+            const exists = APP.inventory.find(p => p.code === code);
+            if (exists) {
+                exists.quantity += qty;
+                showAlert('Product quantity updated', 'success');
+            } else {
+                APP.inventory.push({
+                    code,
+                    name,
+                    price,
+                    expiry,
+                    quantity: qty,
+                    dateAdded: new Date().toISOString()
+                });
+                showAlert('Product added successfully', 'success');
+            }
+
+            document.getElementById('productCode').value = '';
+            document.getElementById('productName').value = '';
+            document.getElementById('productPrice').value = '';
+            document.getElementById('productExpiry').value = '';
+            document.getElementById('productQty').value = '1';
+
+            saveInventory();
+            updateInventoryDisplay();
+        }
+
+        function saveInventory() {
+            localStorage.setItem('inventory', JSON.stringify(APP.inventory));
+            if (APP.githubToken) {
+                pushInventoryToGist();
+            }
+        }
+
+        function loadInventory() {
+            const saved = localStorage.getItem('inventory');
+            if (saved) {
+                APP.inventory = JSON.parse(saved);
+            }
+            updateInventoryDisplay();
+        }
+
+        function updateInventoryDisplay() {
+            const container = document.getElementById('inventoryList');
+            
+            if (APP.inventory.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999;">No products in inventory</p>';
+                return;
+            }
+
+            let html = '<table class="inventory-table"><thead><tr><th>Code</th><th>Name</th><th>Price</th><th>Qty</th><th>Expiry</th><th>Actions</th></tr></thead><tbody>';
+
+            APP.inventory.forEach(product => {
+                const expiryDate = product.expiry ? new Date(product.expiry).toLocaleDateString() : 'N/A';
+                const isExpired = product.expiry && new Date(product.expiry) < new Date();
+                
+                html += `<tr style="${isExpired ? 'background: #fee2e2;' : ''}">`;
+                html += `<td style="font-size: 10px;">${product.code.substring(0, 8)}...</td>`;
+                html += `<td>${product.name}</td>`;
+                html += `<td>₹${product.price.toFixed(2)}</td>`;
+                html += `<td>${product.quantity}</td>`;
+                html += `<td>${expiryDate}</td>`;
+                html += `<td>`;
+                html += `<button class="edit-btn" onclick="editProduct('${product.code}')">Edit</button>`;
+                html += `<button class="delete-btn" onclick="deleteProduct('${product.code}')">Delete</button>`;
+                html += `</td>`;
+                html += `</tr>`;
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function editProduct(code) {
+            const product = APP.inventory.find(p => p.code === code);
+            if (!product) return;
+
+            APP.editingProductCode = code;
+            document.getElementById('editProductName').value = product.name;
+            document.getElementById('editProductPrice').value = product.price;
+            document.getElementById('editProductExpiry').value = product.expiry || '';
+            document.getElementById('editProductQty').value = product.quantity;
+
+            document.getElementById('editProductModal').classList.add('active');
+        }
+
+        function saveEditProduct() {
+            const product = APP.inventory.find(p => p.code === APP.editingProductCode);
+            if (!product) return;
+
+            product.name = document.getElementById('editProductName').value;
+            product.price = parseFloat(document.getElementById('editProductPrice').value);
+            product.expiry = document.getElementById('editProductExpiry').value;
+            product.quantity = parseInt(document.getElementById('editProductQty').value);
+
+            saveInventory();
+            updateInventoryDisplay();
+            closeModal('editProductModal');
+            showAlert('Product updated', 'success');
+        }
+
+        function deleteProduct(code) {
+            if (!confirm('Delete this product?')) return;
+            
+            APP.inventory = APP.inventory.filter(p => p.code !== code);
+            saveInventory();
+            updateInventoryDisplay();
+            showAlert('Product deleted', 'success');
+        }
+
+        // ============================================
+        // CART MANAGEMENT
+        // ============================================
+        function updateCartDisplay() {
+            const container = document.getElementById('cartItems');
+            
+            if (APP.cart.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">Cart is empty</p>';
+                updateBillingSummary();
+                return;
+            }
+
+            let html = '';
+            APP.cart.forEach((item, index) => {
+                const itemTotal = item.price * item.quantity;
+                html += `
+                    <div class="cart-item">
+                        <div class="cart-item-info">
+                            <div class="cart-item-name">${item.name}</div>
+                            <div class="cart-item-details">
+                                ₹${item.price.toFixed(2)} × ${item.quantity} = ₹${itemTotal.toFixed(2)}
+                            </div>
+                        </div>
+                        <div class="cart-item-controls">
+                            <button class="qty-btn" onclick="updateCartQuantity(${index}, -1)">−</button>
+                            <span style="font-weight: 600; min-width: 20px; text-align: center;">${item.quantity}</span>
+                            <button class="qty-btn" onclick="updateCartQuantity(${index}, 1)">+</button>
+                            <button class="remove-btn" onclick="removeFromCart(${index})">✕</button>
                         </div>
                     </div>
-                    <div class="item-controls">
-                        <div class="qty-control">
-                            <button onclick="decreaseQty(${index})">−</button>
-                            <input type="number" value="${item.quantity}" readonly>
-                            <button onclick="increaseQty(${index})">+</button>
-                        </div>
-                        <button class="btn btn-danger" onclick="removeItem(${index})">Delete</button>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            });
+
+            container.innerHTML = html;
+            updateBillingSummary();
         }
 
-        function increaseQty(index) {
-            cart[index].quantity++;
-            renderCart();
-            updateTotals();
-        }
-
-        function decreaseQty(index) {
-            if (cart[index].quantity > 1) {
-                cart[index].quantity--;
-                renderCart();
-                updateTotals();
-            }
-        }
-
-        function removeItem(index) {
-            cart.splice(index, 1);
-            renderCart();
-            updateTotals();
-        }
-
-        function updateTotals() {
-            const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            const discountAmount = (subtotal * discount) / 100;
-            const total = subtotal - discountAmount;
-
-            subtotalAmountEl.textContent = `₹${subtotal.toFixed(2)}`;
-            discountAmountEl.textContent = `₹${discountAmount.toFixed(2)}`;
-            grandTotalAmountEl.textContent = `₹${total.toFixed(2)}`;
-
-            if (discount > 0) {
-                document.getElementById('discountRow').style.display = 'flex';
+        function updateCartQuantity(index, change) {
+            APP.cart[index].quantity += change;
+            if (APP.cart[index].quantity <= 0) {
+                removeFromCart(index);
             } else {
-                document.getElementById('discountRow').style.display = 'none';
+                updateCartDisplay();
             }
         }
 
-        function applyDiscount() {
-            const discountValue = parseFloat(discountInputEl.value) || 0;
-            if (discountValue >= 0 && discountValue <= 100) {
-                discount = discountValue;
-                updateTotals();
-                showStatus(`Discount of ${discount}% applied!`, 'success');
-            } else {
-                showStatus('Please enter a valid discount (0-100%)', 'error');
-            }
+        function removeFromCart(index) {
+            APP.cart.splice(index, 1);
+            updateCartDisplay();
         }
 
         function clearCart() {
-            if (cart.length === 0) {
-                showStatus('Cart is already empty', 'info');
-                return;
-            }
-            if (confirm('Are you sure you want to clear the entire cart?')) {
-                cart = [];
-                discount = 0;
-                discountInputEl.value = '';
-                renderCart();
-                updateTotals();
-                showStatus('Cart cleared!', 'success');
-            }
+            if (!confirm('Clear entire cart?')) return;
+            APP.cart = [];
+            APP.discountPercent = 0;
+            document.getElementById('discountPercent').value = '0';
+            updateCartDisplay();
         }
 
-        function generateReceipt() {
-            const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            const discountAmount = (subtotal * discount) / 100;
+        function updateBillingSummary() {
+            const subtotal = APP.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const discountAmount = subtotal * (APP.discountPercent / 100);
             const total = subtotal - discountAmount;
+
+            document.getElementById('subtotal').textContent = '₹' + subtotal.toFixed(2);
+            document.getElementById('discountAmount').textContent = '₹' + discountAmount.toFixed(2);
+            document.getElementById('totalAmount').textContent = '₹' + total.toFixed(2);
+        }
+
+        function applyDiscount() {
+            const discount = parseFloat(document.getElementById('discountPercent').value) || 0;
+            if (discount < 0 || discount > 100) {
+                showAlert('Discount must be between 0 and 100', 'error');
+                return;
+            }
+            APP.discountPercent = discount;
+            updateBillingSummary();
+            showAlert('Discount applied', 'success');
+        }
+
+        // ============================================
+        // PAYMENT & BILLING
+        // ============================================
+        function selectPayment(mode) {
+            APP.selectedPayment = mode;
+            document.querySelectorAll('.payment-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            event.target.classList.add('selected');
+        }
+
+        function proceedPayment() {
+            if (APP.cart.length === 0) {
+                showAlert('Cart is empty', 'error');
+                return;
+            }
+
+            if (!APP.selectedPayment) {
+                showAlert('Please select a payment mode', 'error');
+                return;
+            }
+
+            generateInvoice();
+        }
+
+        function generateInvoice() {
+            const subtotal = APP.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const discountAmount = subtotal * (APP.discountPercent / 100);
+            const total = subtotal - discountAmount;
+
             const timestamp = new Date().toLocaleString();
+            const invoiceId = 'INV-' + Date.now();
 
-            let receiptHTML = `
-                <div class="receipt-header">
-                    <div class="receipt-title">POS RECEIPT</div>
-                    <div>${timestamp}</div>
-                </div>
-
-                <div class="receipt-items">
-                    <div style="margin-bottom: 10px; font-weight: bold; display: flex; justify-content: space-between;">
-                        <span>Item</span>
-                        <span>Qty × Price = Amount</span>
+            let invoiceHTML = `
+                <div style="font-family: monospace; font-size: 12px; line-height: 1.6;">
+                    <div style="text-align: center; border-bottom: 1px solid #000; padding-bottom: 10px;">
+                        <div style="font-weight: bold; font-size: 14px;">INVOICE</div>
+                        <div>${invoiceId}</div>
+                        <div>${timestamp}</div>
                     </div>
+                    
+                    <div style="margin: 10px 0; border-bottom: 1px solid #000; padding-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span>Item</span>
+                            <span>Qty</span>
+                            <span>Price</span>
+                            <span>Total</span>
+                        </div>
             `;
 
-            cart.forEach(item => {
-                const itemTotal = (item.price * item.quantity).toFixed(2);
-                receiptHTML += `
-                    <div class="receipt-item">
-                        <div>${item.name}</div>
-                        <div>${item.quantity} × ₹${item.price.toFixed(2)} = ₹${itemTotal}</div>
+            APP.cart.forEach(item => {
+                const itemTotal = item.price * item.quantity;
+                invoiceHTML += `
+                    <div style="display: flex; justify-content: space-between; font-size: 11px;">
+                        <span>${item.name.substring(0, 15)}</span>
+                        <span>${item.quantity}</span>
+                        <span>₹${item.price.toFixed(2)}</span>
+                        <span>₹${itemTotal.toFixed(2)}</span>
                     </div>
                 `;
             });
 
-            receiptHTML += `</div><div class="receipt-totals">`;
-
-            receiptHTML += `
-                <div class="receipt-total-row">
-                    <span>Subtotal:</span>
-                    <span>₹${subtotal.toFixed(2)}</span>
-                </div>
-            `;
-
-            if (discount > 0) {
-                receiptHTML += `
-                    <div class="receipt-total-row">
-                        <span>Discount (${discount}%):</span>
-                        <span>-₹${discountAmount.toFixed(2)}</span>
+            invoiceHTML += `
                     </div>
-                `;
-            }
-
-            receiptHTML += `
-                <div class="receipt-total-row receipt-grand-total">
-                    <span>Total:</span>
-                    <span>₹${total.toFixed(2)}</span>
+                    
+                    <div style="border-bottom: 1px solid #000; padding: 10px 0;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span>Subtotal:</span>
+                            <span>₹${subtotal.toFixed(2)}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span>Discount (${APP.discountPercent}%):</span>
+                            <span>-₹${discountAmount.toFixed(2)}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 13px;">
+                            <span>TOTAL:</span>
+                            <span>₹${total.toFixed(2)}</span>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 10px; font-size: 11px;">
+                        <div>Payment: ${APP.selectedPayment.toUpperCase()}</div>
+                        <div style="margin-top: 5px;">Thank you for your purchase!</div>
+                    </div>
                 </div>
-            </div>
-
-            <div class="receipt-footer">
-                <p>Thank you for your purchase!</p>
-                <p>Items: ${cart.length} | Total Qty: ${cart.reduce((sum, item) => sum + item.quantity, 0)}</p>
-            </div>
             `;
 
-            return receiptHTML;
+            document.getElementById('printPreview').innerHTML = invoiceHTML;
+            document.getElementById('printModal').classList.add('active');
+
+            deductInventory();
         }
 
-        function printReceipt() {
-            if (cart.length === 0) {
-                showStatus('Cart is empty. Add items before printing.', 'error');
-                return;
-            }
+        function deductInventory() {
+            APP.cart.forEach(cartItem => {
+                const product = APP.inventory.find(p => p.code === cartItem.code);
+                if (product) {
+                    product.quantity -= cartItem.quantity;
+                    if (product.quantity < 0) product.quantity = 0;
+                }
+            });
 
-            const receiptContent = document.getElementById('receiptContent');
-            receiptContent.innerHTML = generateReceipt();
-            receiptModal.style.display = 'block';
-            
+            saveInventory();
+            updateInventoryDisplay();
+        }
+
+        function printInvoice() {
+            window.print();
             setTimeout(() => {
-                window.print();
+                clearCart();
+                closeModal('printModal');
+                showAlert('Invoice printed successfully', 'success');
             }, 500);
         }
 
-        function downloadPDF() {
-            if (cart.length === 0) {
-                showStatus('Cart is empty. Add items before downloading.', 'error');
-                return;
-            }
-
-            const receiptHTML = generateReceipt();
-            
-            const opt = {
-                margin: 5,
-                filename: `receipt_${Date.now()}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, logging: false, useCORS: true },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-            
-            html2pdf().set(opt).from(receiptHTML).save().then(() => {
-                showStatus('PDF downloaded successfully!', 'success');
-            });
+        // ============================================
+        // UI UTILITIES
+        // ============================================
+        function showSetupModal() {
+            document.getElementById('setupModal').classList.add('active');
         }
 
-        function addManualProduct() {
-            const name = productNameInput.value.trim();
-            const price = parseFloat(productPriceInput.value);
-
-            if (!name || !price || price <= 0) {
-                showStatus('Please enter valid product name and price', 'error');
-                return;
-            }
-
-            const barcode = `MANUAL_${Date.now()}`;
-            productDatabase[barcode] = { name, price };
-            addProductToCart(barcode);
-
-            productNameInput.value = '';
-            productPriceInput.value = '';
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
         }
 
-        // ============ INVENTORY PAGE FUNCTIONS ============
-        function showInventoryStatus(message, type) {
-            inventoryStatusMessage.textContent = message;
-            inventoryStatusMessage.className = `status-message ${type}`;
+        function showAlert(message, type) {
+            const alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = `alert active ${type}`;
+            
             setTimeout(() => {
-                inventoryStatusMessage.className = 'status-message';
-            }, 4000);
+                alert.classList.remove('active');
+            }, 3000);
         }
 
-        function initInventoryScanner() {
-            if (isInventoryScanning) return;
+        function switchProductTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
             
-            const html5QrcodeScanner = new Html5Qrcode('inventoryScannerContainer');
-            
-            html5QrcodeScanner.start(
-                { facingMode: 'environment' },
-                {
-                    fps: 6,
-                    qrbox: { width: 250, height: 250 }
-                },
-                onInventoryScanSuccess,
-                onInventoryScanError
-            ).then(() => {
-                isInventoryScanning = true;
-                inventoryScanner = html5QrcodeScanner;
-                showInventoryStatus('Camera started successfully!', 'success');
-                startInventoryScannerBtn.disabled = true;
-                stopInventoryScannerBtn.disabled = false;
-            }).catch(() => {
-                showInventoryStatus('Error accessing camera. Please check permissions.', 'error');
-            });
+            document.getElementById(tab + '-tab').classList.add('active');
+            event.target.classList.add('active');
         }
 
-        function stopInventoryScanner() {
-            if (inventoryScanner && isInventoryScanning) {
-                inventoryScanner.stop().then(() => {
-                    isInventoryScanning = false;
-                    inventoryScanner = null;
-                    showInventoryStatus('Camera stopped', 'info');
-                    startInventoryScannerBtn.disabled = false;
-                    stopInventoryScannerBtn.disabled = true;
-                }).catch(() => {
-                    showInventoryStatus('Error stopping camera', 'error');
-                });
+        function toggleMode() {
+            const btn = document.getElementById('modeToggle');
+            const camerPane = document.getElementById('camera-pane');
+            const productPane = document.getElementById('product-pane');
+            const cartPane = document.getElementById('cart-pane');
+
+            if (APP.currentMode === 'billing') {
+                APP.currentMode = 'inventory';
+                btn.textContent = '💳 Billing Mode';
+                camerPane.style.display = 'none';
+                productPane.style.flex = '1';
+                cartPane.style.display = 'none';
+            } else {
+                APP.currentMode = 'billing';
+                btn.textContent = '📱 Inventory Mode';
+                camerPane.style.display = 'flex';
+                productPane.style.flex = 'unset';
+                cartPane.style.display = 'flex';
             }
         }
 
-        function onInventoryScanSuccess(decodedText) {
-            const now = Date.now();
-            if (decodedText === lastInventoryScannedBarcode && now - lastInventoryScanTime < 1200) {
-                return;
-            }
-            lastInventoryScannedBarcode = decodedText;
-            lastInventoryScanTime = now;
-            
-            invBarcodeInput.value = decodedText;
-            invProductNameInput.focus();
-            showInventoryStatus(`Barcode scanned: ${decodedText}`, 'success');
-        }
-
-        function onInventoryScanError(error) {
-            // Silently ignore scan errors
-        }
-
-        function renderTable() {
-            const productDatabase = getProductDatabase();
-            const products = Object.entries(productDatabase);
-
-            if (products.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="4" class="empty-message">No products added yet. Add one above!</td></tr>';
-                return;
-            }
-
-            tableBody.innerHTML = products.map(([barcode, product]) => `
-                <tr>
-                    <td>${barcode}</td>
-                    <td>${product.name}</td>
-                    <td>₹${product.price.toFixed(2)}</td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="btn btn-edit" onclick="editProduct('${barcode}')">Edit</button>
-                            <button class="btn btn-danger" onclick="deleteProduct('${barcode}')">Delete</button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        function addProduct() {
-            const barcode = invBarcodeInput.value.trim();
-            const productName = invProductNameInput.value.trim();
-            const price = parseFloat(invPriceInput.value);
-
-            if (!barcode || !productName || !price || price <= 0) {
-                showInventoryStatus('Please fill all fields with valid values', 'error');
-                return;
-            }
-
-            const productDatabase = getProductDatabase();
-
-            if (productDatabase[barcode]) {
-                showInventoryStatus('Barcode already exists! Use Edit to modify.', 'error');
-                return;
-            }
-
-            productDatabase[barcode] = { name: productName, price };
-            saveProductDatabase(productDatabase);
-
-            showInventoryStatus(`${productName} added successfully!`, 'success');
-            invBarcodeInput.value = '';
-            invProductNameInput.value = '';
-            invPriceInput.value = '';
-            renderTable();
-        }
-
-        function editProduct(barcode) {
-            const productDatabase = getProductDatabase();
-            const product = productDatabase[barcode];
-
-            editingBarcode = barcode;
-            editBarcodeInput.value = barcode;
-            editProductNameInput.value = product.name;
-            editPriceInput.value = product.price;
-            editModal.style.display = 'block';
-        }
-
-        function saveEdit() {
-            const productName = editProductNameInput.value.trim();
-            const price = parseFloat(editPriceInput.value);
-
-            if (!productName || !price || price <= 0) {
-                showInventoryStatus('Please enter valid product name and price', 'error');
-                return;
-            }
-
-            const productDatabase = getProductDatabase();
-            productDatabase[editingBarcode] = { name: productName, price };
-            saveProductDatabase(productDatabase);
-
-            showInventoryStatus('Product updated successfully!', 'success');
-            editModal.style.display = 'none';
-            editingBarcode = null;
-            renderTable();
-        }
-
-        function deleteProduct(barcode) {
-            if (confirm('Are you sure you want to delete this product?')) {
-                const productDatabase = getProductDatabase();
-                delete productDatabase[barcode];
-                saveProductDatabase(productDatabase);
-
-                showInventoryStatus('Product deleted successfully!', 'success');
-                renderTable();
-            }
-        }
-
-        // ============ POS PAGE EVENT LISTENERS ============
-        startScannerBtn.addEventListener('click', initScanner);
-        stopScannerBtn.addEventListener('click', stopScanner);
-        addManualProductBtn.addEventListener('click', addManualProduct);
-        applyDiscountBtn.addEventListener('click', applyDiscount);
-        clearCartBtn.addEventListener('click', clearCart);
-        printBtn.addEventListener('click', printReceipt);
-        downloadPdfBtn.addEventListener('click', downloadPDF);
-        printReceiptBtn.addEventListener('click', () => window.print());
-        closeModal.addEventListener('click', () => receiptModal.style.display = 'none');
-
-        barcodeInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                const barcode = barcodeInput.value.trim();
-                if (barcode) {
-                    addProductToCart(barcode);
-                    barcodeInput.value = '';
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (document.getElementById('setupModal').classList.contains('active')) {
+                    closeModal('setupModal');
+                }
+                if (document.getElementById('manualScanModal').classList.contains('active')) {
+                    closeModal('manualScanModal');
+                }
+                if (document.getElementById('editProductModal').classList.contains('active')) {
+                    closeModal('editProductModal');
+                }
+                if (document.getElementById('printModal').classList.contains('active')) {
+                    closeModal('printModal');
                 }
             }
-        });
 
-        productPriceInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                addManualProduct();
+            if (e.altKey && e.key === 'c') {
+                clearCart();
+            }
+
+            if (e.altKey && e.key === 'm') {
+                showManualScanModal();
             }
         });
-
-        window.addEventListener('click', (e) => {
-            if (e.target === receiptModal) {
-                receiptModal.style.display = 'none';
-            }
-        });
-
-        // ============ INVENTORY PAGE EVENT LISTENERS ============
-        startInventoryScannerBtn.addEventListener('click', initInventoryScanner);
-        stopInventoryScannerBtn.addEventListener('click', stopInventoryScanner);
-        addProductBtn.addEventListener('click', addProduct);
-        closeEditModal.addEventListener('click', () => {
-            editModal.style.display = 'none';
-        });
-        cancelEditBtn.addEventListener('click', () => {
-            editModal.style.display = 'none';
-        });
-        saveEditBtn.addEventListener('click', saveEdit);
-
-        invBarcodeInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') invProductNameInput.focus();
-        });
-        invProductNameInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') invPriceInput.focus();
-        });
-        invPriceInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') addProduct();
-        });
-
-        window.addEventListener('click', (e) => {
-            if (e.target === editModal) {
-                editModal.style.display = 'none';
-            }
-        });
-
-        // ============ INITIALIZE ============
-        initializeStorage();
-        stopScannerBtn.disabled = true;
-        stopInventoryScannerBtn.disabled = true;
-        updateTotals();
     </script>
 </body>
 </html>

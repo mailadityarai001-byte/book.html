@@ -1099,7 +1099,7 @@
         }
 
         // ============================================
-        // CAMERA & SCANNING - BILLING MODE
+        // CAMERA & SCANNING - BILLING MODE (FIXED)
         // ============================================
         async function toggleCamera() {
             const btn = document.getElementById('toggleCameraBtn');
@@ -1126,10 +1126,30 @@
                         facingMode: 'environment',
                         width: { ideal: 1280 },
                         height: { ideal: 720 }
-                    }
+                    },
+                    audio: false
                 });
 
                 video.srcObject = stream;
+                video.setAttribute('playsinline', 'true');
+                video.setAttribute('autoplay', 'true');
+                video.setAttribute('muted', 'true');
+                
+                // Wait for video to be ready
+                await new Promise((resolve) => {
+                    video.onloadedmetadata = () => {
+                        video.play().then(() => {
+                            resolve();
+                        }).catch(err => {
+                            console.error('Play error:', err);
+                            resolve();
+                        });
+                    };
+                    
+                    // Timeout after 5 seconds
+                    setTimeout(resolve, 5000);
+                });
+
                 container.style.display = 'block';
                 placeholder.style.display = 'none';
                 APP.cameraActive = true;
@@ -1138,25 +1158,37 @@
                     await loadQRLibrary();
                 }
 
-                scanQRCode(video, 'billing');
+                // Start scanning after a small delay
+                setTimeout(() => {
+                    scanQRCode(video, 'billing');
+                }, 500);
+
+                showAlert('📷 Camera started', 'success');
             } catch (error) {
-                showAlert('Camera access denied: ' + error.message, 'error');
+                console.error('Camera error:', error);
+                showAlert('❌ Camera error: ' + error.message, 'error');
                 document.getElementById('toggleCameraBtn').textContent = '🎥 Enable Camera';
+                document.getElementById('toggleCameraBtn').style.background = '#667eea';
+                APP.cameraActive = false;
             }
         }
 
         function stopCamera() {
             const video = document.getElementById('camera-video');
-            if (video.srcObject) {
-                video.srcObject.getTracks().forEach(track => track.stop());
+            if (video && video.srcObject) {
+                video.srcObject.getTracks().forEach(track => {
+                    track.stop();
+                });
+                video.srcObject = null;
             }
             document.getElementById('camera-container').style.display = 'none';
             document.getElementById('camera-placeholder').style.display = 'block';
             APP.cameraActive = false;
+            showAlert('📷 Camera stopped', 'info');
         }
 
         // ============================================
-        // CAMERA & SCANNING - INVENTORY MODE
+        // CAMERA & SCANNING - INVENTORY MODE (FIXED)
         // ============================================
         async function toggleInventoryCamera() {
             const btn = document.getElementById('toggleInvCameraBtn');
@@ -1183,10 +1215,30 @@
                         facingMode: 'environment',
                         width: { ideal: 1280 },
                         height: { ideal: 720 }
-                    }
+                    },
+                    audio: false
                 });
 
                 video.srcObject = stream;
+                video.setAttribute('playsinline', 'true');
+                video.setAttribute('autoplay', 'true');
+                video.setAttribute('muted', 'true');
+                
+                // Wait for video to be ready
+                await new Promise((resolve) => {
+                    video.onloadedmetadata = () => {
+                        video.play().then(() => {
+                            resolve();
+                        }).catch(err => {
+                            console.error('Play error:', err);
+                            resolve();
+                        });
+                    };
+                    
+                    // Timeout after 5 seconds
+                    setTimeout(resolve, 5000);
+                });
+
                 container.style.display = 'block';
                 placeholder.style.display = 'none';
                 APP.inventoryCameraActive = true;
@@ -1195,29 +1247,52 @@
                     await loadQRLibrary();
                 }
 
-                scanQRCode(video, 'inventory');
+                // Start scanning after a small delay
+                setTimeout(() => {
+                    scanQRCode(video, 'inventory');
+                }, 500);
+
+                showAlert('📷 Camera started', 'success');
             } catch (error) {
-                showAlert('Camera access denied: ' + error.message, 'error');
+                console.error('Camera error:', error);
+                showAlert('❌ Camera error: ' + error.message, 'error');
                 document.getElementById('toggleInvCameraBtn').textContent = '🎥 Enable Camera';
+                document.getElementById('toggleInvCameraBtn').style.background = '#667eea';
+                APP.inventoryCameraActive = false;
             }
         }
 
         function stopInventoryCamera() {
             const video = document.getElementById('inv-camera-video');
-            if (video.srcObject) {
-                video.srcObject.getTracks().forEach(track => track.stop());
+            if (video && video.srcObject) {
+                video.srcObject.getTracks().forEach(track => {
+                    track.stop();
+                });
+                video.srcObject = null;
             }
             document.getElementById('inv-camera-container').style.display = 'none';
             document.getElementById('inv-camera-placeholder').style.display = 'block';
             APP.inventoryCameraActive = false;
+            showAlert('📷 Camera stopped', 'info');
         }
 
         async function loadQRLibrary() {
             return new Promise((resolve, reject) => {
+                if (window.jsQR) {
+                    resolve();
+                    return;
+                }
+                
                 const script = document.createElement('script');
                 script.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
-                script.onload = resolve;
-                script.onerror = reject;
+                script.onload = () => {
+                    console.log('jsQR library loaded');
+                    resolve();
+                };
+                script.onerror = () => {
+                    console.error('Failed to load jsQR');
+                    reject(new Error('Failed to load QR scanner library'));
+                };
                 document.head.appendChild(script);
             });
         }
@@ -1225,36 +1300,55 @@
         function scanQRCode(video, source) {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
+            let isScanning = false;
 
             function scan() {
+                // Check if we should still be scanning
                 if (source === 'billing' && !APP.cameraActive) return;
                 if (source === 'inventory' && !APP.inventoryCameraActive) return;
 
-                if (video.videoWidth === 0 || video.videoHeight === 0) {
+                // Check if video has valid dimensions
+                if (!video || video.videoWidth <= 0 || video.videoHeight <= 0) {
                     requestAnimationFrame(scan);
                     return;
                 }
 
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const code = window.jsQR(imageData.data, imageData.width, imageData.height);
-
-                if (code) {
-                    const now = Date.now();
-                    if (now - APP.lastScanTime > APP.scanDelay) {
-                        APP.lastScanTime = now;
-                        if (source === 'billing') {
-                            processScan(code.data);
-                        } else if (source === 'inventory') {
-                            processInventoryScan(code.data);
-                        }
-                    }
+                // Avoid multiple simultaneous scans
+                if (isScanning) {
+                    requestAnimationFrame(scan);
+                    return;
                 }
 
-                requestAnimationFrame(scan);
+                isScanning = true;
+
+                try {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    
+                    if (window.jsQR && imageData.data) {
+                        const code = window.jsQR(imageData.data, imageData.width, imageData.height);
+
+                        if (code) {
+                            const now = Date.now();
+                            if (now - APP.lastScanTime > APP.scanDelay) {
+                                APP.lastScanTime = now;
+                                if (source === 'billing') {
+                                    processScan(code.data);
+                                } else if (source === 'inventory') {
+                                    processInventoryScan(code.data);
+                                }
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Scan error:', error);
+                } finally {
+                    isScanning = false;
+                    requestAnimationFrame(scan);
+                }
             }
 
             scan();

@@ -896,24 +896,24 @@
     }
 
     function connectFirebase() {
-    let cfg;
-    try {
-        cfg = JSON.parse($('firebaseConfig').value.trim());
-
-        if (!cfg.databaseURL) {
-            cfg.databaseURL = "https://pos-systame-default-rtdb.asia-southeast1.firebasedatabase.app";
-        }
-
-    } catch {
-        alert('Paste valid Firebase config JSON first');
-        return;
-    }
+    const cfg = {
+  apiKey: "AIzaSyCt2qvr0PS2Uw003XhQo5BICsvkzUDuDps",
+  authDomain: "pos-systame.firebaseapp.com",
+  databaseURL: "https://pos-systame-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "pos-systame",
+  storageBucket: "pos-systame.firebasestorage.app",
+  messagingSenderId: "424544602353",
+  appId: "1:424544602353:web:d73e914e72a98ead7f0150",
+  measurementId: "G-9J7TBZJ3B2"
+};
 
     try {
         if (!window.firebase?.initializeApp)
             throw new Error('Firebase SDK not loaded');
 
-        firebase.initializeApp(cfg);
+        if (!firebase.apps.length) {
+            firebase.initializeApp(cfg);
+}
         firebaseDb = firebase.database();
         firebaseReady = true;
 
@@ -1073,6 +1073,7 @@
     bindEvents();
     renderAll();
     updateCloudStatus();
+    connectFirebase();
     setLastScan('No scan yet');
     if (!window.isSecureContext) {
       showCameraHint('Camera needs HTTPS or localhost. On Android, open this app from a local server or secure link instead of opening the HTML file directly.');
